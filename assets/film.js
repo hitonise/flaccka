@@ -18,7 +18,7 @@
     init: function (o) {
       var cv = typeof o.canvas === 'string' ? document.querySelector(o.canvas) : o.canvas;
       if (!cv) return null;
-      var ctx = cv.getContext('2d', { alpha: false });
+      var ctx = cv.getContext('2d'); // transparent until the first frame, so the CSS poster shows through
       var N = o.frames || 200;
       var conn = navigator.connection || {};
       var slow = !!conn.saveData || /(^|-)2g|3g/.test(conn.effectiveType || '');
