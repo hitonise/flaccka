@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Lumen Studio — меньше, но точнее</title>
+<meta name="description" content="Lumen Studio — концепт сайта премиальной студии: свет-курсор, проявляющий заголовок, горизонтальная галерея работ и медленная типографика.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300..600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root{--cream:#efe9df;--paper:#f6f1e8;--ink:#161412;--soft:#6b635a;--bronze:#b08968;--sage:#8aa893;--rose:#c79a9a}
+html{background:var(--cream)}
+body{background:var(--cream);color:var(--ink)}
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:400;opacity:.22;mix-blend-mode:multiply;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .4 0 0 0 0 .35 0 0 0 0 .3 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+::selection{background:var(--ink);color:var(--cream)}
+.cur{background:var(--ink)}
+.cur-r{border-color:rgba(22,20,18,.35)}
+.cur-r.hot,.cur-r.lbl{border-color:var(--ink);background:rgba(22,20,18,.06)}
+.cur-r span{color:var(--ink)}
+.back-link{background:rgba(22,20,18,.82)}
+.wrap{width:min(1320px,100% - 64px);margin:0 auto}
+@media(max-width:640px){.wrap{width:calc(100% - 36px)}}
+.mono{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--soft)}
+
+/* preloader */
+.pre{position:fixed;inset:0;z-index:950;background:var(--ink);color:var(--cream);display:flex;align-items:flex-end;justify-content:space-between;padding:4vw}
+.pre .cnt{font-family:var(--f-serif);font-size:clamp(120px,22vw,340px);line-height:.8;font-style:italic}
+.pre .nm{font-family:var(--f-mono);font-size:12px;letter-spacing:.3em;text-transform:uppercase;opacity:.6}
+html.embed .pre{display:none}
+
+/* light */
+.light{position:fixed;left:0;top:0;width:620px;height:620px;margin:-310px 0 0 -310px;border-radius:50%;pointer-events:none;z-index:1;background:radial-gradient(circle,rgba(255,214,160,.55),rgba(255,214,160,.18) 35%,transparent 65%);mix-blend-mode:soft-light;will-change:transform}
+.light2{position:fixed;left:0;top:0;width:260px;height:260px;margin:-130px 0 0 -130px;border-radius:50%;pointer-events:none;z-index:1;background:radial-gradient(circle,rgba(176,137,104,.35),transparent 70%);will-change:transform}
+
+/* nav */
+.nav{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:26px 32px;mix-blend-mode:difference;color:#efe9df}
+.nav .logo{font-family:var(--f-serif);font-style:italic;font-size:26px}
+.nav .links{display:flex;gap:30px;font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+.nav .links a{position:relative}
+.nav .links a::after{content:'';position:absolute;left:0;right:0;bottom:-4px;height:1px;background:currentColor;transform:scaleX(0);transform-origin:right;transition:transform .5s cubic-bezier(.7,0,.2,1)}
+.nav .links a:hover::after{transform:scaleX(1);transform-origin:left}
+.nav .start{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;border:1px solid currentColor;padding:11px 18px;border-radius:999px}
+@media(max-width:800px){.nav .links{display:none}.nav{padding:20px}}
+
+/* hero */
+.hero{position:relative;min-height:100vh;padding:150px 0 80px;display:flex;flex-direction:column;justify-content:space-between}
+.hero .top{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.hl{position:relative;font-family:var(--f-serif);font-weight:400;font-size:clamp(84px,15.5vw,250px);line-height:.86;letter-spacing:-.025em;margin:40px 0 0;cursor:none}
+.hl .ln{display:block;overflow:hidden;padding-bottom:.06em}
+.hl .ln>span{display:block}
+.hl .ln:nth-child(2){padding-left:12vw;font-style:italic}
+.hl .base{color:transparent;-webkit-text-stroke:1.2px rgba(22,20,18,.55)}
+.hl .lit{position:absolute;inset:0;color:var(--ink);pointer-events:none;-webkit-mask-image:radial-gradient(circle at var(--mx,30%) var(--my,40%),#000 0,#000 var(--r,140px),transparent calc(var(--r,140px) + 160px));mask-image:radial-gradient(circle at var(--mx,30%) var(--my,40%),#000 0,#000 var(--r,140px),transparent calc(var(--r,140px) + 160px))}
+.hl .lit .ln:nth-child(2) span{color:var(--bronze)}
+@media(pointer:coarse){.hl .lit{-webkit-mask-image:none;mask-image:none}}
+.hero .bottom{display:grid;grid-template-columns:1fr minmax(0,420px);gap:40px;align-items:end;margin-top:60px}
+.hero .lead{font-size:clamp(17px,1.5vw,21px);line-height:1.45;color:#3b3530}
+.live{display:inline-flex;align-items:center;gap:10px;margin-top:20px}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--sage);box-shadow:0 0 0 0 rgba(138,168,147,.7);animation:ping 2s infinite}
+@keyframes ping{70%{box-shadow:0 0 0 12px rgba(138,168,147,0)}100%{box-shadow:0 0 0 0 rgba(138,168,147,0)}}
+.scroll{display:flex;align-items:center;gap:14px}
+.scroll i{width:60px;height:1px;background:var(--ink);transform-origin:left;animation:sl 2.4s cubic-bezier(.7,0,.2,1) infinite}
+@keyframes sl{0%{transform:scaleX(0)}50%{transform:scaleX(1)}100%{transform:scaleX(1);transform-origin:right;opacity:0}}
+@media(max-width:800px){.hero .bottom{grid-template-columns:1fr}.hl .ln:nth-child(2){padding-left:0}}
+
+/* manifesto */
+.mani{padding:22vh 0}
+.mani p{font-family:var(--f-serif);font-size:clamp(34px,5vw,78px);line-height:1.08;letter-spacing:-.01em;margin:30px 0 0;max-width:1180px}
+.mani p em{color:var(--bronze)}
+
+/* horizontal works */
+.works{position:relative;height:100vh;overflow:hidden;background:var(--ink);color:var(--cream)}
+.works .hd{position:absolute;top:110px;left:32px;right:32px;display:flex;justify-content:space-between;align-items:baseline;z-index:2}
+.works .hd h2{font-family:var(--f-serif);font-weight:400;font-style:italic;font-size:clamp(40px,5vw,80px);margin:0;line-height:1}
+.works .hd .mono{color:#a69c90}
+.track{position:absolute;left:0;top:0;height:100%;display:flex;align-items:flex-end;gap:4vw;padding:0 32px 92px 34vw;will-change:transform}
+.panel{flex:none;width:min(62vw,880px);display:flex;flex-direction:column;gap:18px}
+.frame{position:relative;height:min(calc(100vh - 390px),520px);border-radius:6px;overflow:hidden;background:#221f1c}
+.art{position:absolute;inset:-6% -14%;}
+.art i{position:absolute;display:block;border-radius:50%}
+.cap{display:flex;justify-content:space-between;align-items:baseline}
+.cap b{font-family:var(--f-serif);font-weight:400;font-size:clamp(28px,2.6vw,42px)}
+.cap span{font-family:var(--f-mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#a69c90}
+.wbar{position:absolute;left:32px;right:32px;bottom:44px;height:1px;background:rgba(239,233,223,.18);z-index:2}
+.wbar i{display:block;height:100%;background:var(--cream);transform-origin:left;transform:scaleX(0)}
+@media(max-width:800px){.panel{width:80vw}.track{padding-left:8vw}.frame{height:48vh}}
+
+/* approach */
+.appr{padding:24vh 0 18vh}
+.appr h2{font-family:var(--f-serif);font-weight:400;font-size:clamp(46px,6vw,100px);margin:20px 0 70px;line-height:1}
+.appr h2 em{color:var(--bronze)}
+.steps{position:relative;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4vw}
+.steps svg{position:absolute;left:0;top:34px;width:100%;height:20px;overflow:visible}
+.step .n{font-family:var(--f-serif);font-style:italic;font-size:64px;line-height:1;display:inline-block;background:var(--cream);padding-right:16px;position:relative}
+.step b{display:block;font-size:22px;font-weight:500;margin:26px 0 10px}
+.step p{color:#4a433c;margin:0;max-width:340px}
+@media(max-width:800px){.steps{grid-template-columns:1fr;gap:50px}.steps svg{display:none}}
+
+/* cta */
+.cta{position:relative;padding:20vh 0 30px;background:var(--paper);overflow:hidden}
+.cta h2{font-family:var(--f-serif);font-weight:400;font-size:clamp(90px,19vw,320px);line-height:.85;margin:0;letter-spacing:-.03em}
+.cta h2 em{color:var(--bronze)}
+.cta .row{display:flex;justify-content:space-between;align-items:center;gap:30px;flex-wrap:wrap;margin-top:40px}
+.circle{width:190px;height:190px;border-radius:50%;background:var(--ink);color:var(--cream);display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--f-mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;transition:background .4s}
+.circle:hover{background:var(--bronze)}
+.mail{font-family:var(--f-serif);font-style:italic;font-size:clamp(28px,3vw,46px);border-bottom:1px solid var(--ink)}
+.foot{margin-top:16vh;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:24px;border-top:1px solid rgba(22,20,18,.15)}
+.foot a{text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="pre" id="pre"><div class="nm">Lumen Studio — Studio Index</div><div class="cnt" id="cnt">0</div></div>
+<a href="index.html" class="back-link">← flaccka</a>
+<div class="light" id="light"></div><div class="light2" id="light2"></div>
+
+<header class="nav">
+  <a class="logo" href="#top">Lumen</a>
+  <nav class="links"><a href="#works">Работы</a><a href="#approach">Подход</a><a href="#mani">Студия</a><a href="#contact">Контакт</a></nav>
+  <a class="start" href="#contact" data-mag>Начать проект</a>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="top"><span class="mono h-in">Studio Index — № 01</span><span class="mono h-in">Берлин · удалённо · с 2014</span></div>
+      <h1 class="hl" id="hl" data-cur="свет" aria-label="Меньше. Но точнее.">
+        <span class="base"><span class="ln"><span>Меньше.</span></span><span class="ln"><span>Но точнее.</span></span></span>
+        <span class="lit" aria-hidden="true"><span class="ln"><span>Меньше.</span></span><span class="ln"><span>Но точнее.</span></span></span>
+      </h1>
+      <div class="bottom">
+        <div class="scroll mono h-in"><i></i>листайте медленно</div>
+        <div class="h-in">
+          <p class="lead">Мы делаем сайты и айдентику для брендов, которым незачем кричать. Воздух, свет и ровно столько деталей, чтобы поверить с первого взгляда.</p>
+          <div class="live mono"><i></i>сейчас в работе — 3 проекта</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="mani" id="mani">
+    <div class="wrap">
+      <span class="mono">(01) Манифест</span>
+      <p id="maniP">Мы убираем всё, что спорит с главным. Остаётся <em>свет, ритм</em> и одно точное действие — ради которого человек пришёл на сайт.</p>
+    </div>
+  </section>
+
+  <section class="works" id="works">
+    <div class="hd"><h2>Избранные работы</h2><span class="mono">(02) 2024 — 2026</span></div>
+    <div class="track" id="track">
+      <article class="panel"><div class="frame"><div class="art" data-art="1"></div></div><div class="cap"><b>Aura Skincare</b><span>Айдентика · 2025</span></div></article>
+      <article class="panel"><div class="frame"><div class="art" data-art="2"></div></div><div class="cap"><b>Field Coffee</b><span>Упаковка · 2024</span></div></article>
+      <article class="panel"><div class="frame"><div class="art" data-art="3"></div></div><div class="cap"><b>Northline</b><span>Сайт · 2025</span></div></article>
+      <article class="panel"><div class="frame"><div class="art" data-art="4"></div></div><div class="cap"><b>Oro Atelier</b><span>Ювелирный бренд · 2024</span></div></article>
+      <article class="panel"><div class="frame"><div class="art" data-art="5"></div></div><div class="cap"><b>Still</b><span>Мебель · 2026</span></div></article>
+    </div>
+    <div class="wbar"><i id="wbar"></i></div>
+  </section>
+
+  <section class="appr" id="approach">
+    <div class="wrap">
+      <span class="mono">(03) Подход</span>
+      <h2 class="spl">Три шага <em>к тишине</em></h2>
+      <div class="steps">
+        <svg viewBox="0 0 1000 20" preserveAspectRatio="none"><path id="appLine" d="M0 10 H1000" stroke="#161412" stroke-width="1" fill="none" vector-effect="non-scaling-stroke"/></svg>
+        <div class="step"><span class="n">01</span><b>Слушаем</b><p>Две недели разговоров, чтобы найти одну фразу, на которой держится бренд.</p></div>
+        <div class="step"><span class="n">02</span><b>Вычитаем</b><p>Убираем всё лишнее, пока каждый элемент не станет незаменимым.</p></div>
+        <div class="step"><span class="n">03</span><b>Полируем</b><p>Доводим свет, ритм и движение до состояния «сделано руками».</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="contact">
+    <div class="wrap">
+      <span class="mono">(04) Контакт</span>
+      <h2 class="spl2">Начнём<em>?</em></h2>
+      <div class="row">
+        <a class="mail" href="mailto:hello@lumen.studio" data-cur="написать">hello@lumen.studio</a>
+        <a class="circle" href="#contact" data-mag data-cur="">Обсудить<br>проект</a>
+      </div>
+      <div class="foot mono"><span>Lumen Studio — концепт из портфолио <a href="index.html">flaccka</a></span><span>© 2026</span></div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/site.js"></script>
+<script src="assets/shot.js"></script>
+<script>
+(function(){
+  'use strict';
+  var S = window.Site, $ = S.$, $$ = S.$$;
+
+  /* generated art for the gallery (pure CSS shapes, no images) */
+  var ARTS = {
+    1: [['#e9d6c2',0,0,'100%','100%',0],['#c9a487','58%','16%','46%','76%','50%'],['#f3e6d6','20%','46%','30%','40%','50%'],['#b08968','64%','58%','10%','14%','50%']],
+    2: [['#2c3a2f',0,0,'100%','100%',0],['#8aa893','8%','30%','60%','90%','50% 50% 0 0'],['#cfe3d4','46%','8%','34%','52%','50%'],['#e7cdb0','70%','60%','22%','36%','50%']],
+    3: [['#1d2130',0,0,'100%','100%',0],['#3f4a6b','-10%','40%','120%','90%','50%'],['#e9d3e0','52%','12%','26%','40%','50%'],['#f6f1e8','30%','62%','2%','30%','0']],
+    4: [['#efe3cf',0,0,'100%','100%',0],['#d1a764','30%','18%','42%','70%','50%'],['#efe3cf','38%','30%','26%','44%','50%'],['#161412','16%','80%','70%','2%','0']],
+    5: [['#d8cfc4',0,0,'100%','100%',0],['#8a7f72','10%','56%','80%','30%','14px'],['#b98aa6','56%','14%','30%','42%','50%'],['#f6f1e8','20%','24%','18%','26%','50%']]
+  };
+  $$('.art').forEach(function(a){
+    ARTS[a.dataset.art].forEach(function(s, i){
+      var el = document.createElement('i');
+      el.style.cssText = 'background:' + s[0] + ';left:' + s[1] + ';top:' + s[2] + ';width:' + s[3] + ';height:' + s[4] + ';border-radius:' + s[5] + ';';
+      if (i === 0) el.style.borderRadius = '0';
+      a.appendChild(el);
+    });
+  });
+
+  /* cursor light + spotlight reveal on the headline */
+  var light = $('#light'), light2 = $('#light2'), hl = $('#hl'), lit = $('.lit', hl);
+  var mx = innerWidth * .4, my = innerHeight * .45, lx = mx, ly = my, l2x = mx, l2y = my, moved = false, rr = 140;
+  window.addEventListener('pointermove', function(e){ mx = e.clientX; my = e.clientY; moved = true; }, { passive: true });
+  var t0 = 0;
+  (function loop(){
+    requestAnimationFrame(loop); t0 += .01;
+    if (!moved && !S.RM) { mx = innerWidth * (.35 + Math.sin(t0) * .2); my = innerHeight * (.45 + Math.cos(t0 * .8) * .12); }
+    var vx = mx - lx, vy = my - ly;
+    lx += vx * .12; ly += vy * .12; l2x += (mx - l2x) * .05; l2y += (my - l2y) * .05;
+    var sp = Math.min(1, Math.hypot(vx, vy) / 60);
+    light.style.transform = 'translate(' + lx.toFixed(1) + 'px,' + ly.toFixed(1) + 'px) scale(' + (1 + sp * .25).toFixed(3) + ')';
+    light2.style.transform = 'translate(' + l2x.toFixed(1) + 'px,' + l2y.toFixed(1) + 'px)';
+    var r = hl.getBoundingClientRect();
+    rr += ((140 + sp * 70) - rr) * .1;
+    lit.style.setProperty('--mx', (lx - r.left).toFixed(1) + 'px');
+    lit.style.setProperty('--my', (ly - r.top).toFixed(1) + 'px');
+    lit.style.setProperty('--r', rr.toFixed(1) + 'px');
+  })();
+
+  S.cursor(); S.magnetic('[data-mag]', .3);
+
+  if (!window.gsap) { $('#pre').style.display = 'none'; return; }
+  gsap.registerPlugin(ScrollTrigger);
+
+  gsap.set('.hl .ln > span', { yPercent: 112 });
+  gsap.set('.h-in', { y: 24, opacity: 0 });
+
+  function intro(){
+    gsap.to('.hl .ln > span', { yPercent: 0, duration: 1.6, ease: 'expo.out', stagger: .12 });
+    gsap.to('.h-in', { y: 0, opacity: 1, duration: 1.2, ease: 'expo.out', stagger: .08, delay: .5 });
+  }
+
+  /* preloader: counter, then curtain lifts */
+  if (S.embed || /[?&]shot/.test(location.search)) { $('#pre').style.display = 'none'; intro(); }
+  else {
+    var o = { v: 0 }, cnt = $('#cnt');
+    gsap.to(o, { v: 100, duration: 1.6, ease: 'power2.inOut', onUpdate: function(){ cnt.textContent = Math.round(o.v); }, onComplete: function(){
+      gsap.to('#pre', { yPercent: -100, duration: 1.1, ease: 'expo.inOut', onComplete: function(){ $('#pre').style.display = 'none'; } });
+      setTimeout(intro, 350);
+    } });
+  }
+
+  /* manifesto words light up with scroll */
+  var mw = S.splitWords($('#maniP'), false);
+  gsap.fromTo(mw, { opacity: .14 }, { opacity: 1, stagger: .06, ease: 'none', scrollTrigger: { trigger: '#maniP', start: 'top 80%', end: 'bottom 45%', scrub: true } });
+
+  /* horizontal pinned gallery with inner parallax */
+  var track = $('#track');
+  function dist(){ return track.scrollWidth - innerWidth; }
+  var hTween = gsap.to(track, { x: function(){ return -dist(); }, ease: 'none', scrollTrigger: { trigger: '#works', start: 'top top', end: function(){ return '+=' + dist(); }, pin: true, scrub: 1, invalidateOnRefresh: true, onUpdate: function(self){ $('#wbar').style.transform = 'scaleX(' + self.progress.toFixed(3) + ')'; } } });
+  $$('.panel').forEach(function(p){
+    gsap.fromTo($('.art', p), { xPercent: 8 }, { xPercent: -8, ease: 'none', scrollTrigger: { trigger: p, containerAnimation: hTween, start: 'left right', end: 'right left', scrub: true } });
+    gsap.from($('.frame', p), { clipPath: 'inset(0 0 0 100%)', duration: 1.2, ease: 'expo.out', scrollTrigger: { trigger: p, containerAnimation: hTween, start: 'left 85%' } });
+    gsap.from($('.cap', p), { y: 30, opacity: 0, duration: 1, ease: 'expo.out', scrollTrigger: { trigger: p, containerAnimation: hTween, start: 'left 70%' } });
+  });
+
+  /* approach: line draws, steps rise */
+  var line = $('#appLine');
+  gsap.fromTo(line, { attr: { 'stroke-dasharray': '1000 1000', 'stroke-dashoffset': 1000 } }, { attr: { 'stroke-dashoffset': 0 }, ease: 'none', scrollTrigger: { trigger: '.steps', start: 'top 80%', end: 'bottom 60%', scrub: true } });
+  gsap.from('.step', { y: 60, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: .14, scrollTrigger: { trigger: '.steps', start: 'top 80%' } });
+  $$('.spl').forEach(function(h){ gsap.from(S.splitWords(h, true), { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: .08, scrollTrigger: { trigger: h, start: 'top 85%' } }); });
+
+  /* CTA: giant word rises letter by letter */
+  gsap.from(S.splitChars($('.spl2')), { yPercent: 100, opacity: 0, duration: 1.2, ease: 'expo.out', stagger: .05, scrollTrigger: { trigger: '.spl2', start: 'top 85%' } });
+})();
+</script>
+</body>
+</html>

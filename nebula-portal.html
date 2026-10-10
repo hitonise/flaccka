@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Nebula — связь в дальнем космосе</title>
+<meta name="description" content="Nebula — демо-лендинг tech-продукта: 3D-сцена с облётом камеры, телеметрия в реальном времени, интерактивная схема сети и тарифы.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root{--acc:#9b8cff;--acc2:#5fe0c8;--ink:#e9e8ff}
+#spaceBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
+body{background:transparent;color:var(--ink)}
+.wrap{width:min(1200px,100% - 56px);margin:0 auto}
+@media(max-width:640px){.wrap{width:calc(100% - 36px)}}
+.glass{background:rgba(12,12,30,.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(155,140,255,.22)}
+
+.nav{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:60;width:min(1200px,100% - 32px);display:flex;align-items:center;justify-content:space-between;padding:10px 12px 10px 22px;border-radius:999px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--f-mono);font-weight:700;letter-spacing:.22em;font-size:14px}
+.logo svg{width:22px;height:22px}
+.links{display:flex;gap:4px}
+.links a{font-size:13px;color:#c7c4ea;padding:9px 14px;border-radius:999px;transition:background .25s,color .25s}
+.links a:hover{background:rgba(155,140,255,.14);color:#fff}
+.cta{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;background:linear-gradient(135deg,#9b8cff,#6f5cff);color:#fff;font-size:13px;font-weight:500;box-shadow:0 10px 30px rgba(111,92,255,.45);transition:box-shadow .3s,transform .3s}
+.cta:hover{box-shadow:0 14px 44px rgba(111,92,255,.7)}
+.ghost{display:inline-flex;align-items:center;gap:10px;padding:12px 20px;border-radius:999px;border:1px solid rgba(155,140,255,.4);color:#e9e8ff;font-size:13px;transition:background .3s,border-color .3s}
+.ghost:hover{background:rgba(155,140,255,.12);border-color:var(--acc)}
+html.embed .nav{top:10px}
+@media(max-width:820px){.links{display:none}.nav .cta{padding:10px 14px;font-size:12px}}
+
+.hero{min-height:100vh;display:flex;align-items:center;padding:130px 0 90px}
+.badge{display:inline-flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:8px 14px;border-radius:999px;color:#cfc8ff}
+.badge i{width:7px;height:7px;border-radius:50%;background:var(--acc2);box-shadow:0 0 12px var(--acc2);animation:bl 1.8s infinite}
+@keyframes bl{50%{opacity:.3}}
+.hero h1{font-weight:600;font-size:clamp(44px,6.6vw,96px);line-height:.98;letter-spacing:-.035em;margin:26px 0 0;max-width:760px}
+.hero h1 em{font-family:var(--f-serif);font-weight:400;font-style:italic;letter-spacing:-.01em}
+.hero h1 em .wd{background:linear-gradient(90deg,#c8bfff,#7ff0dc);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.08em}
+.hero p{max-width:520px;font-size:clamp(16px,1.4vw,18px);color:#c2bfe0;margin:26px 0 34px}
+.hero .row{display:flex;flex-wrap:wrap;gap:12px}
+.tele{position:absolute;right:max(28px,calc((100vw - 1200px)/2));bottom:48px;width:310px;border-radius:20px;padding:18px 18px 16px;font-family:var(--f-mono);font-size:11px;color:#bcb6ef}
+.tele .hd{display:flex;justify-content:space-between;letter-spacing:.12em;text-transform:uppercase;margin-bottom:14px}
+.tele .hd b{color:var(--acc2);font-weight:500}
+.tele .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.tele .cell{padding:10px 12px;border-radius:12px;background:rgba(155,140,255,.08)}
+.tele .cell span{display:block;font-size:10px;letter-spacing:.1em;color:#8c87b8;text-transform:uppercase}
+.tele .cell b{display:block;font-size:20px;color:#fff;font-weight:500;margin-top:4px}
+.bars{display:flex;align-items:flex-end;gap:4px;height:22px}
+.bars i{flex:1;background:var(--acc);border-radius:2px;transition:height .25s}
+.tele canvas{width:100%;height:46px;margin-top:10px}
+@media(max-width:1000px){.hero{flex-direction:column;align-items:stretch;justify-content:center}.tele{position:relative;right:auto;bottom:auto;margin:40px auto 0;width:min(310px,calc(100% - 40px))}}
+
+section{position:relative}
+.kicker{font-family:var(--f-mono);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--acc2)}
+.h2{font-weight:600;font-size:clamp(36px,4.8vw,72px);line-height:1;letter-spacing:-.03em;margin:16px 0 0;max-width:820px}
+.h2 em{font-family:var(--f-serif);font-weight:400;font-style:italic;color:#c8bfff}
+
+.how{height:300vh}
+.how .pin{position:sticky;top:0;height:100vh;display:flex;align-items:center}
+.how .grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr);gap:50px;align-items:center}
+.steps{list-style:none;margin:36px 0 0;padding:0;display:grid;gap:12px}
+.steps li{padding:18px 20px;border-radius:18px;border:1px solid rgba(155,140,255,.14);background:rgba(10,10,26,.45);transition:background .4s,border-color .4s,transform .4s,opacity .4s;opacity:.45}
+.steps li b{display:block;font-size:18px;font-weight:500;color:#fff;margin-bottom:4px}
+.steps li span{font-size:14px;color:#b6b3d4}
+.steps li i{font-family:var(--f-mono);font-style:normal;font-size:11px;color:var(--acc2);letter-spacing:.14em;display:block;margin-bottom:8px}
+.steps li.on{opacity:1;background:rgba(111,92,255,.16);border-color:rgba(155,140,255,.55);transform:translateX(10px)}
+.diagram{border-radius:26px;padding:20px;aspect-ratio:1.25}
+.diagram svg{width:100%;height:100%;overflow:visible}
+@media(max-width:900px){.how .grid{grid-template-columns:1fr;gap:20px}.diagram{aspect-ratio:1.6}.steps{margin-top:20px}.steps li{padding:12px 14px}.steps li span{display:none}}
+
+.features{padding:24vh 0 14vh}
+.fgrid{margin-top:56px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.fcard{position:relative;border-radius:22px;padding:26px;min-height:230px;overflow:hidden}
+.fcard svg{width:38px;height:38px;margin-bottom:46px}
+.fcard b{display:block;font-size:19px;font-weight:500;margin-bottom:8px;color:#fff}
+.fcard span{font-size:14px;color:#b6b3d4}
+.fcard::after{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(135deg,rgba(155,140,255,.7),transparent 40%,transparent 60%,rgba(95,224,200,.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;opacity:0;transition:opacity .4s}
+.fcard:hover::after{opacity:1}
+@media(max-width:900px){.fgrid{grid-template-columns:1fr}}
+
+.numbers{padding:12vh 0}
+.ngrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-top:50px}
+.num{border-radius:22px;padding:26px}
+.num b{display:block;font-size:clamp(40px,4.6vw,66px);font-weight:600;letter-spacing:-.03em;color:#fff;line-height:1}
+.num b small{font-size:.45em;color:#c8bfff;margin-left:4px}
+.num span{display:block;margin-top:12px;font-size:13px;color:#b6b3d4}
+@media(max-width:900px){.ngrid{grid-template-columns:1fr 1fr}}
+
+.pricing{padding:16vh 0}
+.toggle{display:inline-flex;padding:5px;border-radius:999px;margin-top:30px;position:relative}
+.toggle button{position:relative;z-index:1;font-size:13px;padding:10px 18px;border-radius:999px;color:#c7c4ea;transition:color .3s}
+.toggle button.on{color:#0c0b1c}
+.toggle .knob{position:absolute;top:5px;left:5px;height:calc(100% - 10px);border-radius:999px;background:#e9e8ff;transition:transform .45s cubic-bezier(.7,0,.2,1),width .45s cubic-bezier(.7,0,.2,1)}
+.plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-top:40px}
+.plan{border-radius:24px;padding:30px;display:flex;flex-direction:column;gap:14px}
+.plan.hot{background:linear-gradient(160deg,rgba(111,92,255,.35),rgba(12,12,30,.6));border-color:rgba(155,140,255,.7)}
+.plan h4{margin:0;font-size:15px;font-family:var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:#cfc8ff}
+.plan .price{font-size:52px;font-weight:600;letter-spacing:-.03em;color:#fff}
+.plan .price small{font-size:15px;color:#b6b3d4;font-weight:400;letter-spacing:0}
+.plan ul{list-style:none;margin:0;padding:0;display:grid;gap:9px;font-size:14px;color:#c2bfe0}
+.plan ul li::before{content:'✦';color:var(--acc2);margin-right:10px}
+.plan .cta,.plan .ghost{justify-content:center;margin-top:auto}
+@media(max-width:900px){.plans{grid-template-columns:1fr}}
+
+.final{padding:20vh 0 6vh;text-align:center}
+.final h2{font-size:clamp(46px,7vw,120px);font-weight:600;letter-spacing:-.04em;line-height:.95;margin:0}
+.final h2 em{font-family:var(--f-serif);font-weight:400;font-style:italic;color:#c8bfff}
+.final .row{display:flex;justify-content:center;gap:12px;margin-top:36px;flex-wrap:wrap}
+.foot{margin-top:16vh;padding:24px 0;border-top:1px solid rgba(155,140,255,.18);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-family:var(--f-mono);font-size:12px;color:#8c87b8}
+.foot a{text-decoration:underline}
+</style>
+</head>
+<body>
+<canvas id="spaceBg"></canvas>
+<div id="loader"><div class="ld-t">nebula<b>.</b> установка связи</div><div class="ld-bar"><i></i></div></div>
+<a href="index.html" class="back-link">← flaccka</a>
+
+<header class="nav glass">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4" fill="#9b8cff"/><ellipse cx="12" cy="12" rx="10.5" ry="4" stroke="#5fe0c8" stroke-width="1.4" transform="rotate(-24 12 12)"/></svg>NEBULA</div>
+  <nav class="links"><a href="#how">Как работает</a><a href="#features">Возможности</a><a href="#numbers">Сеть</a><a href="#pricing">Тарифы</a></nav>
+  <a class="cta" href="#pricing" data-mag>Запросить доступ</a>
+</header>
+
+<main>
+  <section class="hero" id="top">
+    <div class="wrap">
+      <div class="badge glass h-in"><i></i>nebula v2 · межпланетная сеть</div>
+      <h1 id="heroH">Связь, которой <em>не страшна</em> дистанция</h1>
+      <p class="h-in">Nebula передаёт данные между станциями, кораблями и Землёй через орбитальную сетку ретрансляторов — и показывает весь путь сигнала в одной панели.</p>
+      <div class="row h-in"><a class="cta" href="#pricing" data-mag>Запросить доступ →</a><a class="ghost" href="#how" data-mag>Как это работает</a></div>
+    </div>
+    <div class="tele glass h-in" aria-label="Телеметрия">
+      <div class="hd"><span>link · earth ↔ helion-7</span><b>● live</b></div>
+      <div class="grid">
+        <div class="cell"><span>задержка</span><b id="tLat">412</b></div>
+        <div class="cell"><span>поток, гбит/с</span><b id="tThr">8.4</b></div>
+        <div class="cell"><span>пакеты</span><b id="tPk">0</b></div>
+        <div class="cell"><span>сигнал</span><div class="bars" id="tBars"><i></i><i></i><i></i><i></i><i></i></div></div>
+      </div>
+      <canvas id="tWave" width="560" height="92"></canvas>
+    </div>
+  </section>
+
+  <section class="how" id="how">
+    <div class="pin">
+      <div class="wrap grid">
+        <div>
+          <div class="kicker">01 / как это работает</div>
+          <h2 class="h2 sp">Сигнал проходит <em>три орбиты</em></h2>
+          <ol class="steps" id="steps">
+            <li class="on"><i>шаг 01</i><b>Захват</b><span>Наземная станция упаковывает данные и выбирает окно связи.</span></li>
+            <li><i>шаг 02</i><b>Ретрансляция</b><span>Пакет перескакивает между спутниками сетки по самому короткому маршруту.</span></li>
+            <li><i>шаг 03</i><b>Доставка</b><span>Получатель проверяет целостность и подтверждает приём за один проход.</span></li>
+          </ol>
+        </div>
+        <div class="diagram glass">
+          <svg viewBox="0 0 600 480" id="dia">
+            <defs>
+              <radialGradient id="gE" cx="40%" cy="35%"><stop offset="0" stop-color="#8fd6ff"/><stop offset=".7" stop-color="#1f5bbf"/><stop offset="1" stop-color="#0b1d49"/></radialGradient>
+              <radialGradient id="gP" cx="40%" cy="35%"><stop offset="0" stop-color="#e2d7ff"/><stop offset=".7" stop-color="#6f5cff"/><stop offset="1" stop-color="#26196e"/></radialGradient>
+              <filter id="glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            </defs>
+            <g opacity=".35" stroke="#9b8cff" fill="none">
+              <ellipse cx="300" cy="240" rx="250" ry="90" stroke-dasharray="3 7"/>
+              <ellipse cx="300" cy="240" rx="180" ry="150" stroke-dasharray="3 7"/>
+              <ellipse cx="300" cy="240" rx="110" ry="200" stroke-dasharray="3 7"/>
+            </g>
+            <path id="route" d="M80 380 C 150 250, 190 120, 300 110 S 470 180, 520 90" fill="none" stroke="#5fe0c8" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+            <circle cx="80" cy="380" r="34" fill="url(#gE)"/>
+            <text x="80" y="438" fill="#bcb6ef" font-family="JetBrains Mono" font-size="12" text-anchor="middle">ЗЕМЛЯ</text>
+            <circle cx="520" cy="90" r="26" fill="url(#gP)"/>
+            <text x="520" y="140" fill="#bcb6ef" font-family="JetBrains Mono" font-size="12" text-anchor="middle">HELION-7</text>
+            <g id="sats"></g>
+            <circle id="pkt" r="7" fill="#fff" filter="url(#glow)"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="wrap">
+      <div class="kicker">02 / возможности</div>
+      <h2 class="h2 sp">Инфраструктура, которую <em>не видно</em> — пока она работает</h2>
+      <div class="fgrid">
+        <div class="fcard glass"><svg viewBox="0 0 40 40" fill="none" stroke="#9b8cff" stroke-width="1.6"><rect x="9" y="17" width="22" height="16" rx="3"/><path d="M14 17v-4a6 6 0 0 1 12 0v4"/><circle cx="20" cy="25" r="2" fill="#5fe0c8" stroke="none"/></svg><b>Шифрование на каждом хопе</b><span>Ключи обновляются при каждом переходе между спутниками.</span></div>
+        <div class="fcard glass"><svg viewBox="0 0 40 40" fill="none" stroke="#9b8cff" stroke-width="1.6"><circle cx="8" cy="30" r="3"/><circle cx="32" cy="10" r="3"/><circle cx="22" cy="24" r="3"/><path d="M10.5 28.5 19.5 25.5M24 22l6-9.5" stroke="#5fe0c8"/></svg><b>Адаптивные маршруты</b><span>Сеть сама обходит солнечные бури и тень планет.</span></div>
+        <div class="fcard glass"><svg viewBox="0 0 40 40" fill="none" stroke="#9b8cff" stroke-width="1.6"><path d="M8 12h24M8 20h24M8 28h14"/><circle cx="30" cy="28" r="4" stroke="#5fe0c8"/></svg><b>Офлайн-буфер</b><span>Если окна связи нет, пакеты ждут на орбите и уходят первыми.</span></div>
+        <div class="fcard glass"><svg viewBox="0 0 40 40" fill="none" stroke="#9b8cff" stroke-width="1.6"><path d="M6 28 14 18l7 6 13-14"/><path d="M28 10h6v6" stroke="#5fe0c8"/></svg><b>Телеметрия в реальном времени</b><span>Задержка, поток и качество сигнала — в одном дашборде.</span></div>
+        <div class="fcard glass"><svg viewBox="0 0 40 40" fill="none" stroke="#9b8cff" stroke-width="1.6"><path d="M15 12 7 20l8 8M25 12l8 8-8 8"/><path d="M22 9 18 31" stroke="#5fe0c8"/></svg><b>Открытый API</b><span>REST и вебхуки — подключите свою систему за вечер.</span></div>
+        <div class="fcard glass"><svg viewBox="0 0 40 40" fill="none" stroke="#9b8cff" stroke-width="1.6"><circle cx="20" cy="20" r="12"/><path d="M20 12v8l5 4" stroke="#5fe0c8"/></svg><b>SLA 99.99%</b><span>Резервные кольца сетки включаются за доли секунды.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="numbers" id="numbers">
+    <div class="wrap">
+      <div class="kicker">03 / сеть сегодня</div>
+      <h2 class="h2 sp">Сеть растёт <em>каждый запуск</em></h2>
+      <div class="ngrid">
+        <div class="num glass"><b><span data-n="214">0</span></b><span>спутников-ретрансляторов</span></div>
+        <div class="num glass"><b><span data-n="99.99" data-d="2">0</span><small>%</small></b><span>доступность за год</span></div>
+        <div class="num glass"><b><span data-n="38">0</span><small>мс</small></b><span>средняя задержка на орбите</span></div>
+        <div class="num glass"><b><span data-n="12">0</span><small>пб</small></b><span>данных в месяц</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pricing" id="pricing">
+    <div class="wrap">
+      <div class="kicker">04 / тарифы</div>
+      <h2 class="h2 sp">Выберите <em>орбиту</em></h2>
+      <div class="toggle glass" id="tog"><span class="knob" id="knob"></span><button type="button" class="on" data-p="m">Помесячно</button><button type="button" data-p="y">За год −20%</button></div>
+      <div class="plans">
+        <div class="plan glass"><h4>Станция</h4><div class="price">$<span data-m="49" data-y="39">49</span><small> / мес</small></div><ul><li>1 наземный узел</li><li>500 ГБ трафика</li><li>Базовая телеметрия</li></ul><a class="ghost" href="#" data-mag>Начать</a></div>
+        <div class="plan glass hot"><h4>Флот</h4><div class="price">$<span data-m="199" data-y="159">199</span><small> / мес</small></div><ul><li>До 20 кораблей</li><li>10 ТБ трафика</li><li>Адаптивные маршруты</li><li>Приоритетная поддержка</li></ul><a class="cta" href="#" data-mag>Выбрать Флот</a></div>
+        <div class="plan glass"><h4>Галактика</h4><div class="price">$<span data-m="899" data-y="719">899</span><small> / мес</small></div><ul><li>Без ограничений</li><li>Выделенное кольцо сетки</li><li>SLA 99.99%</li></ul><a class="ghost" href="#" data-mag>Связаться</a></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <div class="wrap">
+      <h2 id="finalH">Готовы выйти <em>на орбиту?</em></h2>
+      <div class="row"><a class="cta" href="#pricing" data-mag>Запросить доступ</a><a class="ghost" href="index.html" data-mag>← Вернуться в портфолио</a></div>
+      <div class="foot"><span>Nebula — концепт-сайт из портфолио <a href="index.html">flaccka</a></span><span>демо-продукт, все данные вымышлены</span></div>
+    </div>
+  </section>
+</main>
+
+<script src="assets/site.js"></script>
+<script src="assets/space.js"></script>
+<script src="assets/shot.js"></script>
+<script>
+(function(){
+  'use strict';
+  var S = window.Site, $ = S.$, $$ = S.$$;
+
+  var space = window.SpaceBG && SpaceBG.init({
+    lite: S.embed,
+    nebula: [0x4a3bff, 0x2fb7ff, 0xc56bff],
+    planetColors: [[.22,.30,.72],[.58,.72,.98],[.12,.14,.42],[.74,.62,.98]],
+    ringColor: [.66,.72,.98], atmosColor: [.42,.58,1],
+    path: {
+      pos:  [[0,1.5,34],[-3,2,20],[4,0,4],[-4,2,-18],[5,3,-44],[-3,-1,-72],[4,1,-104],[10,3,-136],[16,2.4,-168]],
+      look: [[3,.5,0],[2,.5,-18],[-2,0,-40],[3,1,-66],[0,0,-96],[9,0,-130],[22,0,-172],[34,-2,-212],[40,-4,-232]],
+      roll: [0,-.06,.05,-.07,.06,-.04,.05,-.03,0]
+    },
+    astroKeys: function(aspect){ return aspect < 1 ? [
+      { p:0, sx:.3, sy:.55, d:8, yaw:-.7 }, { at:'#how', off:-.5, sx:2.2, sy:.5, d:9 }, { at:'.final', off:-.4, sx:2.2, sy:.4, d:8 }, { at:'.final', off:0, sx:.2, sy:.5, d:7.5, wave:1 }
+    ] : [
+      { p:0, sx:.48, sy:.12, d:5, yaw:-.8 },
+      { at:'#how', off:-.6, sx:.62, sy:.2, d:6, yaw:-.6 },
+      { at:'#how', off:-.15, sx:2.3, sy:.3, d:7, yaw:-.6 },
+      { at:'.final', off:-.7, sx:2.3, sy:.2, d:6, yaw:-.6 },
+      { at:'.final', off:-.15, sx:.62, sy:.06, d:5.2, yaw:-.6, wave:1 }
+    ]; }
+  });
+  window.space = space;
+
+  /* live telemetry */
+  var lat = $('#tLat'), thr = $('#tThr'), pk = $('#tPk'), bars = $$('#tBars i'), wave = $('#tWave'), wx = wave.getContext('2d'), packets = 0;
+  setInterval(function(){
+    lat.textContent = (398 + Math.round(Math.random()*28)) + '';
+    thr.textContent = (8 + Math.random()*1.4).toFixed(1);
+    packets += 1200 + Math.floor(Math.random()*900); pk.textContent = packets.toLocaleString('ru-RU');
+    var lvl = 3 + Math.round(Math.random()*2);
+    bars.forEach(function(b, i){ b.style.height = (6 + i*4) + 'px'; b.style.opacity = i < lvl ? 1 : .2; });
+  }, 700);
+  var wt = 0;
+  (function drawWave(){
+    requestAnimationFrame(drawWave); wt += .05;
+    wx.clearRect(0,0,560,92);
+    [['#5fe0c8',1,0],['rgba(155,140,255,.7)',.6,1.7]].forEach(function(c){
+      wx.strokeStyle = c[0]; wx.lineWidth = 2; wx.beginPath();
+      for (var x = 0; x <= 560; x += 6) {
+        var y = 46 + Math.sin(x*.025 + wt*2 + c[2])*18*c[1]*Math.sin(wt*.7 + x*.004) + Math.sin(x*.11 + wt*5)*3;
+        if (!x) wx.moveTo(x, y); else wx.lineTo(x, y);
+      }
+      wx.stroke();
+    });
+  })();
+
+  /* diagram */
+  var route = $('#route'), len = route.getTotalLength(), pkt = $('#pkt'), sats = $('#sats');
+  route.style.strokeDasharray = len; route.style.strokeDashoffset = len;
+  [.28,.5,.72].forEach(function(f){
+    var p = route.getPointAtLength(len*f);
+    var g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.setAttribute('transform','translate(' + p.x + ',' + p.y + ')');
+    g.innerHTML = '<rect x="-14" y="-4" width="10" height="8" fill="#9b8cff" opacity=".8"/><rect x="4" y="-4" width="10" height="8" fill="#9b8cff" opacity=".8"/><circle r="5" fill="#e9e8ff"/><circle r="14" fill="none" stroke="#5fe0c8" opacity=".5" class="ping"/>';
+    sats.appendChild(g);
+  });
+  var pktT = 0;
+  (function movePkt(){
+    requestAnimationFrame(movePkt);
+    var drawn = len - parseFloat(route.style.strokeDashoffset || len);
+    pktT = (pktT + 2.2) % Math.max(1, drawn);
+    var p = route.getPointAtLength(Math.max(0, pktT));
+    pkt.setAttribute('cx', p.x); pkt.setAttribute('cy', p.y);
+    pkt.style.opacity = drawn > 4 ? 1 : 0;
+  })();
+
+  /* pricing toggle */
+  var tog = $('#tog'), knob = $('#knob');
+  function placeKnob(b){ knob.style.width = b.offsetWidth + 'px'; knob.style.transform = 'translateX(' + (b.offsetLeft - 5) + 'px)'; }
+  $$('button', tog).forEach(function(b){
+    b.addEventListener('click', function(){
+      $$('button', tog).forEach(function(x){ x.classList.toggle('on', x === b); }); placeKnob(b);
+      $$('.price span').forEach(function(s){
+        var to = +s.dataset[b.dataset.p], o = { v: +s.textContent };
+        if (window.gsap) gsap.to(o, { v: to, duration: .8, ease: 'power3.out', onUpdate: function(){ s.textContent = Math.round(o.v); } }); else s.textContent = to;
+        if (window.gsap) gsap.fromTo(s.parentNode, { y: -6, opacity: .4 }, { y: 0, opacity: 1, duration: .5 });
+      });
+    });
+  });
+  setTimeout(function(){ placeKnob($('button.on', tog)); }, 200);
+  window.addEventListener('resize', function(){ placeKnob($('button.on', tog)); });
+
+  S.cursor(); S.magnetic('[data-mag]', .25); S.tilt('.fcard', 6, true); S.tilt('.plan', 4, true);
+
+  if (!window.gsap) { S.loader(300); return; }
+  gsap.registerPlugin(ScrollTrigger);
+
+  var hw = S.splitWords($('#heroH'), true);
+  gsap.set(hw, { yPercent: 110 }); gsap.set('.h-in', { y: 30, opacity: 0 });
+  $$('.sp').forEach(function(h){ gsap.from(S.splitWords(h, true), { yPercent: 110, duration: 1, ease: 'expo.out', stagger: .05, scrollTrigger: { trigger: h, start: 'top 85%' } }); });
+  gsap.from('.fcard', { y: 60, opacity: 0, rotateX: -12, duration: 1, ease: 'expo.out', stagger: .08, scrollTrigger: { trigger: '.fgrid', start: 'top 85%' } });
+  gsap.from('.num', { y: 50, opacity: 0, duration: 1, ease: 'expo.out', stagger: .1, scrollTrigger: { trigger: '.ngrid', start: 'top 85%', onEnter: function(){
+    $$('[data-n]').forEach(function(el){ var d = +(el.dataset.d || 0), o = { v: 0 }; gsap.to(o, { v: +el.dataset.n, duration: 2.2, ease: 'power3.out', onUpdate: function(){ el.textContent = o.v.toFixed(d); } }); });
+  } } });
+  gsap.from('.plan', { y: 70, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: .1, scrollTrigger: { trigger: '.plans', start: 'top 85%' } });
+  gsap.from(S.splitChars($('#finalH')), { yPercent: 100, opacity: 0, rotate: 6, duration: .9, ease: 'expo.out', stagger: .02, scrollTrigger: { trigger: '#finalH', start: 'top 85%' } });
+
+  /* pinned "how it works": route draws with scroll, steps light up */
+  var stepEls = $$('#steps li');
+  ScrollTrigger.create({ trigger: '#how', start: 'top top', end: 'bottom bottom', scrub: true, onUpdate: function(self){
+    var p = self.progress;
+    route.style.strokeDashoffset = (len * (1 - Math.min(1, p * 1.15))).toFixed(1);
+    var idx = p < .34 ? 0 : p < .67 ? 1 : 2;
+    stepEls.forEach(function(li, i){ li.classList.toggle('on', i === idx); });
+  } });
+
+  window.addEventListener('site:loaded', function(){
+    gsap.to(hw, { yPercent: 0, duration: 1.3, ease: 'expo.out', stagger: .06 });
+    gsap.to('.h-in', { y: 0, opacity: 1, duration: 1.2, ease: 'expo.out', stagger: .1, delay: .25 });
+    ScrollTrigger.refresh(); if (space) space.refresh();
+  });
+  if (S.embed) window.dispatchEvent(new Event('site:loaded')); else S.loader(900);
+})();
+</script>
+</body>
+</html>

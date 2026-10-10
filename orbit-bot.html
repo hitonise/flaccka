@@ -1,0 +1,577 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Orbit — Telegram-бот, который продаёт</title>
+<meta name="description" content="Orbit — концепт Telegram-бота для магазина: живой бот в 3D-телефоне с каталогом, корзиной, оплатой и отслеживанием заказа, история диалога по скроллу и схема интеграций.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root{--tg:#2aabee;--tg2:#7cf0ff;--f-sans:'Onest',sans-serif;--line:rgba(255,255,255,.12)}
+body{font-family:var(--f-sans)}
+.cur{background:var(--tg2)}
+.cur-r.hot,.cur-r.lbl{border-color:var(--tg2);background:rgba(124,240,255,.08)}
+#spaceBg{position:fixed;inset:0;width:100%;height:100%;z-index:0}
+main{position:relative;z-index:1}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;justify-content:space-between;padding:18px 26px;transition:background .4s,backdrop-filter .4s}
+.top.solid{background:rgba(6,8,14,.55);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:900;font-size:20px;letter-spacing:-.02em}
+.logo i{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#bdf6ff,var(--tg) 55%,#135d8a);position:relative;box-shadow:0 0 18px rgba(42,171,238,.6)}
+.logo i::after{content:'';position:absolute;inset:-6px -9px;border:1.5px solid rgba(124,240,255,.8);border-radius:50%;transform:rotate(-24deg) scaleY(.38)}
+.top nav{display:flex;gap:26px;font-size:14px;color:rgba(255,255,255,.7)}
+.top nav a:hover{color:#fff}
+.btn{display:inline-flex;align-items:center;gap:10px;background:var(--tg);color:#fff;font-weight:700;font-size:15px;padding:14px 24px;border-radius:14px;box-shadow:0 10px 40px rgba(42,171,238,.4);transition:transform .3s cubic-bezier(.3,1.6,.5,1),box-shadow .3s}
+.btn:hover{box-shadow:0 14px 50px rgba(42,171,238,.6)}
+.btn.ghost{background:rgba(255,255,255,.07);box-shadow:none;border:1px solid var(--line)}
+.btn.sm{padding:10px 18px;font-size:14px;border-radius:12px}
+@media(max-width:760px){.top nav{display:none}}
+
+.hero{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);align-items:center;gap:40px;padding:110px 6vw 60px}
+.badge{display:inline-flex;align-items:center;gap:10px;font-size:13px;color:var(--tg2);border:1px solid rgba(124,240,255,.3);background:rgba(124,240,255,.06);border-radius:999px;padding:7px 14px}
+.badge i{width:7px;height:7px;border-radius:50%;background:#42f59b;box-shadow:0 0 10px #42f59b;animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.hero h1{font-weight:900;font-size:clamp(44px,5.8vw,92px);line-height:.98;letter-spacing:-.045em;margin:24px 0 0}
+.hero h1 .grad .wd{background:linear-gradient(100deg,#fff 0%,var(--tg2) 45%,var(--tg) 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{font-size:clamp(16px,1.35vw,19px);line-height:1.6;color:rgba(255,255,255,.72);max-width:500px;margin:24px 0 0}
+.hero .ctas{display:flex;gap:12px;flex-wrap:wrap;margin-top:34px}
+.kpis{display:flex;gap:34px;margin-top:44px}
+.kpis b{display:block;font-size:30px;font-weight:800;letter-spacing:-.03em}
+.kpis span{font-size:12px;color:rgba(255,255,255,.55)}
+
+.stage{position:relative;height:min(720px,86vh);perspective:1600px;display:flex;align-items:center;justify-content:center}
+.phone{position:relative;width:min(340px,82vw);height:min(690px,82vh);border-radius:52px;background:#0b0d12;padding:11px;transform-style:preserve-3d;transform:rotateY(-16deg) rotateX(6deg);box-shadow:0 0 0 1.5px rgba(255,255,255,.18),inset 0 0 0 2px #23262e,-30px 50px 90px rgba(0,0,0,.55),0 0 80px rgba(42,171,238,.18)}
+.phone::before{content:'';position:absolute;top:22px;left:50%;transform:translateX(-50%);width:104px;height:30px;border-radius:20px;background:#000;z-index:5}
+.phone::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,rgba(255,255,255,.14),transparent 30%,transparent 70%,rgba(255,255,255,.05));pointer-events:none;z-index:6}
+.scr{position:relative;height:100%;border-radius:42px;overflow:hidden;display:flex;flex-direction:column;background:#0e1621;font-size:14px}
+.tg-h{display:flex;align-items:center;gap:10px;padding:58px 14px 10px;background:#17212b;border-bottom:1px solid rgba(0,0,0,.3);z-index:2}
+.tg-h .bk{color:#6ab3f3;font-size:26px;line-height:1;margin-right:2px}
+.av{width:38px;height:38px;border-radius:50%;flex:0 0 auto;background:radial-gradient(circle at 35% 30%,#bdf6ff,var(--tg) 55%,#135d8a);position:relative}
+.av::after{content:'';position:absolute;inset:6px -2px;border:1.5px solid rgba(255,255,255,.85);border-radius:50%;transform:rotate(-24deg) scaleY(.4)}
+.tg-h b{display:block;font-size:15px;font-weight:700}
+.tg-h small{font-size:12.5px;color:#7f91a4;transition:color .2s}
+.tg-h small.typing{color:#6ab3f3}
+.tg-h .cart{margin-left:auto;position:relative;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center}
+.tg-h .cart svg{width:18px;height:18px}
+.tg-h .cart b{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;border-radius:9px;background:var(--tg);font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 4px;transform:scale(0)}
+.chat{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px 10px 8px;display:flex;flex-direction:column;gap:6px;scrollbar-width:none;background:radial-gradient(circle at 20% 20%,rgba(42,171,238,.08),transparent 40%),radial-gradient(circle at 80% 70%,rgba(124,240,255,.06),transparent 40%),#0e1621}
+.chat::-webkit-scrollbar{display:none}
+.m{max-width:86%;padding:8px 11px 6px;border-radius:16px;line-height:1.42;position:relative;transform-origin:0 100%;word-wrap:break-word}
+.m.bot{align-self:flex-start;background:#182533;border-bottom-left-radius:5px}
+.m.me{align-self:flex-end;background:#2b5278;border-bottom-right-radius:5px;transform-origin:100% 100%}
+.m time{display:block;text-align:right;font-size:10.5px;color:rgba(255,255,255,.4);margin-top:2px}
+.m.me time::after{content:' ✓✓';color:#6ab3f3}
+.ikb{display:grid;gap:4px;margin-top:4px;max-width:86%;align-self:flex-start;width:86%}
+.ikb .r{display:flex;gap:4px}
+.ikb button{flex:1;background:rgba(43,82,120,.45);color:#fff;font-size:13px;font-weight:500;padding:9px 6px;border-radius:10px;transition:background .2s,transform .15s;backdrop-filter:blur(4px)}
+.ikb button:hover{background:rgba(43,82,120,.8)}
+.ikb button:active{transform:scale(.95)}
+.ikb.used{opacity:.45;pointer-events:none}
+.typing-b{align-self:flex-start;background:#182533;border-radius:16px;border-bottom-left-radius:5px;padding:12px 14px;display:flex;gap:4px}
+.typing-b i{width:7px;height:7px;border-radius:50%;background:#7f91a4;animation:tb 1s infinite}
+.typing-b i:nth-child(2){animation-delay:.15s}.typing-b i:nth-child(3){animation-delay:.3s}
+@keyframes tb{0%,60%,100%{transform:translateY(0);opacity:.5}30%{transform:translateY(-5px);opacity:1}}
+.prod{padding:0;overflow:hidden;width:86%}
+.prod .pic{height:150px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.bag{width:84px;height:110px;border-radius:10px 10px 14px 14px;position:relative;box-shadow:inset -10px -8px 20px rgba(0,0,0,.25),0 14px 24px rgba(0,0,0,.35)}
+.bag::before{content:'';position:absolute;left:-4px;right:-4px;top:-8px;height:16px;border-radius:4px;background:inherit;filter:brightness(.8)}
+.bag::after{content:attr(data-l);position:absolute;left:10px;right:10px;top:38px;background:rgba(255,255,255,.88);color:#222;font-size:9px;font-weight:800;text-align:center;padding:6px 2px;border-radius:4px;letter-spacing:.06em}
+.prod .bd{padding:10px 12px 6px}
+.prod .bd b{display:block;font-size:14.5px}
+.prod .bd span{display:block;font-size:12.5px;color:#9fb0c2;margin-top:2px}
+.prod .bd strong{display:block;margin-top:6px;font-size:15px;color:#6ab3f3}
+.prod .dots{display:flex;gap:4px;justify-content:center;margin-top:8px}
+.prod .dots i{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.25)}
+.prod .dots i.on{background:#6ab3f3}
+.inv{width:86%;padding:0;overflow:hidden}
+.inv .hd{padding:12px;background:linear-gradient(135deg,#2a5a86,#1b3550)}
+.inv .hd small{font-size:11px;opacity:.7;letter-spacing:.06em}
+.inv .hd b{display:block;font-size:16px;margin-top:4px}
+.inv .ln{display:flex;justify-content:space-between;padding:6px 12px;font-size:13px;color:#c5d3e0}
+.inv .ln.t{border-top:1px solid rgba(255,255,255,.08);font-weight:700;color:#fff;padding:9px 12px}
+.trk .st{display:flex;align-items:center;gap:8px;font-size:13px;color:#6f8092;padding:3px 0;transition:color .4s}
+.trk .st i{width:16px;height:16px;border-radius:50%;border:2px solid #3a4a5a;flex:0 0 auto;transition:all .4s;display:flex;align-items:center;justify-content:center;font-size:9px;font-style:normal}
+.trk .st.on{color:#fff}
+.trk .st.on i{background:#42c88a;border-color:#42c88a}
+.trk .bar{height:4px;border-radius:2px;background:#24384a;margin:8px 0 4px;overflow:hidden}
+.trk .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--tg),#42c88a);transition:width .8s cubic-bezier(.3,.8,.3,1)}
+.inp{display:flex;align-items:center;gap:8px;padding:8px 10px 22px;background:#17212b}
+.inp input{flex:1;min-width:0;background:#0e1621;border:0;border-radius:20px;padding:11px 14px;color:#fff;font:inherit;font-size:14px;outline:none}
+.inp button{width:38px;height:38px;border-radius:50%;background:var(--tg);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.inp button svg{width:18px;height:18px}
+.ptoast{position:absolute;left:50%;top:110px;transform:translate(-50%,-20px);background:rgba(20,30,42,.95);border:1px solid rgba(255,255,255,.1);padding:8px 14px;border-radius:12px;font-size:12.5px;opacity:0;pointer-events:none;z-index:4;white-space:nowrap}
+.ntf{position:absolute;display:flex;align-items:center;gap:10px;padding:10px 14px 10px 10px;border-radius:16px;background:rgba(18,26,38,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.14);font-size:13px;box-shadow:0 20px 50px rgba(0,0,0,.4);white-space:nowrap;pointer-events:none}
+.ntf i{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;font-size:14px}
+.ntf small{display:block;font-size:11px;color:rgba(255,255,255,.55)}
+@media(max-width:960px){.hero{grid-template-columns:1fr;padding-top:100px}.stage{height:auto;padding:30px 0}.ntf{display:none}.kpis{gap:22px}}
+
+.sec{position:relative;padding:130px 6vw}
+.sec-h{font-weight:900;font-size:clamp(38px,5vw,78px);line-height:1;letter-spacing:-.04em;margin:0}
+.lab{font-family:var(--f-mono);font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--tg2);display:block;margin-bottom:18px}
+
+.story{height:620vh;position:relative}
+.story .pin{position:sticky;top:0;height:100vh;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6vw;align-items:center;padding:0 8vw;overflow:hidden}
+.story .cnt{font-family:var(--f-mono);font-size:13px;color:var(--tg2);letter-spacing:.14em}
+.story .cap{position:relative;height:260px;margin-top:14px}
+.story .cap div{position:absolute;inset:0;opacity:0;visibility:hidden}
+.story .cap h3{font-weight:900;font-size:clamp(32px,3.8vw,58px);line-height:1.02;letter-spacing:-.04em;margin:0}
+.story .cap p{font-size:17px;line-height:1.6;color:rgba(255,255,255,.7);max-width:460px;margin:18px 0 0}
+.steps{display:flex;gap:8px;margin-top:26px}
+.steps i{height:4px;flex:0 0 34px;border-radius:2px;background:rgba(255,255,255,.15);position:relative;overflow:hidden}
+.steps i b{position:absolute;inset:0;background:var(--tg);transform:scaleX(0);transform-origin:left}
+.phone.sm{width:300px;height:610px;transform:rotateY(-10deg) rotateX(4deg)}
+.phone.sm .chat [data-s]:not(.in){display:none}
+@media(max-width:960px){.story .pin{grid-template-columns:1fr;padding:80px 6vw 0;align-content:start;gap:20px}.story .cap{height:150px}.story .cap p{font-size:14px}.phone.sm{width:260px;height:min(480px,58vh);margin:0 auto;border-radius:40px;padding:8px}.phone.sm::before{top:14px;width:80px;height:22px}.phone.sm .scr{font-size:12.5px;border-radius:33px}.phone.sm .tg-h{padding-top:42px}.phone.sm .tg-h b{font-size:13px}.phone.sm .av{width:30px;height:30px}}
+
+.flow{position:relative;max-width:1100px;margin:60px auto 0}
+.flow svg{width:100%;height:auto;overflow:visible}
+.flow .ln{fill:none;stroke:rgba(124,240,255,.25);stroke-width:2}
+.flow .ln.hi{stroke:var(--tg2);stroke-width:3;filter:drop-shadow(0 0 6px var(--tg2))}
+.flow .dash{fill:none;stroke:rgba(124,240,255,.6);stroke-width:2;stroke-dasharray:4 14;animation:dsh 1.4s linear infinite}
+@keyframes dsh{to{stroke-dashoffset:-36}}
+.flow .nd rect{fill:rgba(16,24,36,.85);stroke:rgba(255,255,255,.18);transition:stroke .3s,fill .3s}
+.flow .nd text{fill:#fff;font-family:var(--f-sans);font-size:15px;font-weight:700}
+.flow .nd text.s{fill:rgba(255,255,255,.5);font-size:11px;font-weight:400;font-family:var(--f-mono)}
+.flow .nd{cursor:pointer}
+.flow .nd:hover rect,.flow .nd.on rect{stroke:var(--tg2);fill:rgba(20,48,70,.9)}
+.flow .pk{fill:#fff;filter:drop-shadow(0 0 6px var(--tg2))}
+.flow-info{margin:30px auto 0;max-width:640px;text-align:center;min-height:56px;font-size:16px;line-height:1.6;color:rgba(255,255,255,.75)}
+.flow-info b{color:#fff}
+
+.feats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:60px}
+.feat{position:relative;padding:28px;border-radius:24px;background:linear-gradient(160deg,rgba(255,255,255,.07),rgba(255,255,255,.02));border:1px solid var(--line);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);overflow:hidden;min-height:250px;display:flex;flex-direction:column;justify-content:space-between}
+.feat .ic{width:52px;height:52px;border-radius:16px;background:rgba(42,171,238,.14);display:flex;align-items:center;justify-content:center}
+.feat .ic svg{width:26px;height:26px;stroke:var(--tg2);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.feat h3{font-size:21px;font-weight:800;letter-spacing:-.02em;margin:0}
+.feat p{font-size:14.5px;line-height:1.6;color:rgba(255,255,255,.65);margin:8px 0 0}
+@media(max-width:960px){.feats{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.feats{grid-template-columns:1fr}}
+
+.cta{min-height:90vh;display:flex;flex-direction:column;justify-content:center;padding:120px 6vw}
+.cta h2{font-weight:900;font-size:clamp(46px,7.4vw,124px);line-height:.96;letter-spacing:-.05em;margin:0;max-width:900px}
+.cta p{font-size:18px;color:rgba(255,255,255,.7);max-width:520px;line-height:1.6;margin:26px 0 34px}
+.foot{padding:30px 6vw 40px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:13px;color:rgba(255,255,255,.5);border-top:1px solid var(--line)}
+.foot a{text-decoration:underline}
+</style>
+</head>
+<body>
+<canvas id="spaceBg"></canvas>
+<a href="index.html" class="back-link">← flaccka</a>
+
+<header class="top" id="top">
+  <span class="logo"><i></i>orbit</span>
+  <nav><a href="#story">Как работает</a><a href="#flow">Интеграции</a><a href="#feats">Возможности</a></nav>
+  <a class="btn sm" href="#cta">Хочу бота</a>
+</header>
+
+<main>
+  <section class="hero">
+    <div>
+      <span class="badge"><i></i>бот онлайн · отвечает за 0,8 с</span>
+      <h1 id="h1">Бот, который <span class="grad">продаёт,</span> пока вы спите</h1>
+      <p class="sub">Orbit — Telegram-бот для магазина: каталог, корзина, оплата и доставка прямо в чате. Справа он живой, попробуйте заказать кофе.</p>
+      <div class="ctas"><a class="btn" href="#cta" data-mag>Заказать такого бота</a><a class="btn ghost" href="#story">Как это работает ↓</a></div>
+      <div class="kpis"><div><b data-k="24">0</b><span>часа в сутки на связи</span></div><div><b data-k="3.4" data-pre="×">0</b><span>конверсия против сайта*</span></div><div><b data-k="0">0</b><span>приложений устанавливать</span></div></div>
+    </div>
+    <div class="stage" id="stage">
+      <div class="phone" id="phone">
+        <div class="scr">
+          <div class="tg-h"><span class="bk">‹</span><div class="av"></div><div><b>Orbit · Космокофе</b><small id="st">бот</small></div><span class="cart" data-cur="корзина" id="cartIc"><svg viewBox="0 0 24 24" fill="none" stroke="#6ab3f3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h7.7a2 2 0 0 0 2-1.5L21 8H6"/><circle cx="10" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></svg><b id="cartN">0</b></span></div>
+          <div class="chat" id="chat"></div>
+          <form class="inp" id="inp" autocomplete="off"><input id="msg" placeholder="Напишите: «хочу кофе»" aria-label="Сообщение боту"><button type="submit" aria-label="Отправить"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3.4 20.4 21 12 3.4 3.6l-.1 6.5L15 12 3.3 13.9z"/></svg></button></form>
+          <div class="ptoast" id="ptoast"></div>
+        </div>
+      </div>
+      <div class="ntf" style="left:-2%;top:16%" data-z="120"><i style="background:#42c88a">₽</i><div>Оплата прошла<small>заказ #1042 · 1 780 ₽</small></div></div>
+      <div class="ntf" style="right:-4%;top:40%" data-z="180"><i style="background:var(--tg)">↺</i><div>Клиент вернулся<small>повторный заказ · −10%</small></div></div>
+      <div class="ntf" style="left:2%;bottom:14%" data-z="90"><i style="background:#f5a524">★</i><div>Новый отзыв 5,0<small>«быстрее, чем на сайте»</small></div></div>
+    </div>
+  </section>
+
+  <section class="story" id="story">
+    <div class="pin">
+      <div>
+        <span class="lab">// одна ночь из жизни бота</span>
+        <div class="cnt"><span id="sNum">01</span> / 06</div>
+        <div class="cap" id="caps">
+          <div><h3>23:47. Менеджеры спят</h3><p>Клиент пишет в Telegram ночью, и бот сразу отвечает. Никаких форм обратной связи и «перезвоним завтра».</p></div>
+          <div><h3>Понимает живую речь</h3><p>«Для турки» значит мелкий помол. Бот распознаёт намерение и сразу показывает подходящие сорта, а не весь каталог.</p></div>
+          <div><h3>Корзина в два касания</h3><p>Клиент пишет обычным текстом, бот собирает заказ: количество, помол, адрес из прошлых покупок.</p></div>
+          <div><h3>Оплата внутри Telegram</h3><p>Telegram Payments: карта, СБП, Apple Pay. Клиент не уходит на сторонний сайт, поэтому оплачивает чаще.</p></div>
+          <div><h3>Сам сообщает о доставке</h3><p>Статусы приходят из CRM и службы доставки автоматически. Вопросов «где мой заказ?» в поддержку меньше.</p></div>
+          <div><h3>Возвращает клиентов</h3><p>Через три недели бот напоминает, что кофе заканчивается, и предлагает повторить заказ со скидкой. Это работает лучше рассылок.</p></div>
+        </div>
+        <div class="steps" id="steps"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+      </div>
+      <div class="phone sm" id="phone2">
+        <div class="scr">
+          <div class="tg-h"><span class="bk">‹</span><div class="av"></div><div><b>Orbit · Космокофе</b><small>бот</small></div></div>
+          <div class="chat" id="chat2">
+            <div class="m me" data-s="0">есть что-нибудь для турки? 🙂<time>23:47</time></div>
+            <div class="m bot" data-s="1">Конечно! Для турки нужен самый мелкий помол. Вот три сорта, которые раскрываются лучше всего:<time>23:47</time></div>
+            <div class="m bot prod" data-s="1"><div class="pic" style="background:linear-gradient(135deg,#f6c177,#c0563b)"><div class="bag" data-l="ЭФИОПИЯ" style="background:#2b1d16"></div></div><div class="bd"><b>Эфиопия Иргачеффе</b><span>жасмин, бергамот</span><strong>890 ₽</strong></div></div>
+            <div class="m me" data-s="2">беру эфиопию, 2 пачки, адрес как в прошлый раз<time>23:48</time></div>
+            <div class="m bot" data-s="2">Готово: 2 × Эфиопия Иргачеффе, помол для турки. Доставка на ул. Звёздная, 12.<time>23:48</time></div>
+            <div class="m bot inv" data-s="3"><div class="hd"><small>СЧЁТ · TELEGRAM PAYMENTS</small><b>Космокофе, заказ #1042</b></div><div class="ln"><span>2 × Эфиопия</span><span>1 780 ₽</span></div><div class="ln"><span>Доставка</span><span>0 ₽</span></div><div class="ln t"><span>Оплачено ✓</span><span>1 780 ₽</span></div></div>
+            <div class="m bot" data-s="4">Заказ #1042 передан курьеру. Будет завтра с 10:00 до 12:00. Пришлю сообщение, когда курьер будет рядом.<time>09:12</time></div>
+            <div class="m bot" data-s="5">Привет! Эфиопия, наверное, заканчивается ☕ Повторить заказ со скидкой 10%?<time>3 нед.</time></div>
+            <div class="ikb" data-s="5"><div class="r"><button type="button" tabindex="-1">Повторить · 1 602 ₽</button></div></div>
+          </div>
+          <div class="inp"><input placeholder="Сообщение" tabindex="-1" disabled><button type="button" tabindex="-1" aria-hidden="true"><svg viewBox="0 0 24 24" fill="#fff"><path d="M3.4 20.4 21 12 3.4 3.6l-.1 6.5L15 12 3.3 13.9z"/></svg></button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="flow">
+    <div style="text-align:center"><span class="lab">// под капотом</span><h2 class="sec-h rv">Связан со всем, <br>что у вас уже есть</h2></div>
+    <div class="flow">
+      <svg viewBox="0 0 1000 470" id="flowSvg" aria-label="Схема интеграций">
+        <g id="paths"></g><g id="dashes"></g><g id="packets"></g><g id="nodes"></g>
+      </svg>
+    </div>
+    <p class="flow-info" id="flowInfo">Наведите на узел, чтобы увидеть, что через него проходит.</p>
+  </section>
+
+  <section class="sec" id="feats">
+    <span class="lab">// возможности</span>
+    <h2 class="sec-h rv">Больше, чем <br>кнопки в чате</h2>
+    <div class="feats">
+      <article class="feat"><div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg></div><div><h3>Каталог и корзина</h3><p>Карусели товаров, фильтры, варианты и остатки из склада в реальном времени.</p></div></article>
+      <article class="feat"><div class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20M6 15h4"/></svg></div><div><h3>Оплата в чате</h3><p>Telegram Payments, ЮKassa, СБП. Чеки по 54-ФЗ отправляются автоматически.</p></div></article>
+      <article class="feat"><div class="ic"><svg viewBox="0 0 24 24"><path d="M4 12h3l3-8 4 16 3-8h3"/></svg></div><div><h3>Умные рассылки</h3><p>Сегменты по покупкам и брошенным корзинам. Без спама: только то, что человек ждёт.</p></div></article>
+      <article class="feat"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3"/></svg></div><div><h3>CRM и 1С</h3><p>Заказы, клиенты и статусы синхронизируются с amoCRM, Битрикс24 и 1С.</p></div></article>
+      <article class="feat"><div class="ic"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg></div><div><h3>Мини-приложение</h3><p>Полноценная витрина внутри Telegram для больших каталогов: WebApp с вашим дизайном.</p></div></article>
+      <article class="feat"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 20V10M9 20V4M15 20v-7M21 20V8"/></svg></div><div><h3>Аналитика воронки</h3><p>Где клиенты уходят, что покупают вместе и какие рассылки окупаются.</p></div></article>
+    </div>
+  </section>
+
+  <section class="cta" id="cta">
+    <span class="lab">// запуск</span>
+    <h2 class="rv">Нужен такой <br>бот для вас?</h2>
+    <p>Соберу бота под ваш бизнес: от простого каталога до продаж с оплатой и CRM. Первая версия — от 7 дней.</p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap"><a class="btn" href="https://t.me/flaccka" target="_blank" rel="noopener" data-mag>Написать @flaccka</a><a class="btn ghost" href="index.html#contact">Все контакты</a></div>
+  </section>
+  <footer class="foot"><span>Orbit — концепт Telegram-бота из портфолио <a href="index.html">flaccka</a></span><span>* цифры демонстрационные</span></footer>
+</main>
+
+<script src="assets/site.js"></script>
+<script src="assets/space.js"></script>
+<script src="assets/shot.js"></script>
+<script>
+(function(){
+  'use strict';
+  var S = window.Site, $ = S.$, $$ = S.$$, SHOT = /[?&]shot/.test(location.search);
+  var coarse = matchMedia('(pointer:coarse)').matches;
+
+  var space = window.SpaceBG && SpaceBG.init({
+    lite: S.embed, belt: false,
+    nebula: [0x2a6bff, 0x1fc8e6, 0x6a4bff],
+    planetColors: [[.16,.38,.62],[.5,.82,.96],[.08,.16,.32],[.62,.9,1]],
+    ringColor: [.6,.86,1], atmosColor: [.35,.75,1],
+    path: {
+      pos:  [[0,1,34],[3,2,18],[-3,1,2],[4,2,-20],[-2,3,-46],[3,-1,-74],[-2,1,-104],[6,3,-136],[14,2.4,-168]],
+      look: [[-2,.5,0],[-1,.5,-18],[2,0,-40],[-2,1,-66],[2,0,-96],[8,0,-130],[20,0,-172],[34,-2,-212],[40,-4,-232]],
+      roll: [0,.05,-.05,.06,-.04,.05,-.03,.02,0]
+    },
+    astroKeys: function(aspect){ return aspect < 1 ? [
+      { p:0, sx:2.4, sy:.4, d:8 }, { at:'.cta', off:-.6, sx:2.4, sy:.4, d:8 }, { at:'.cta', off:0, sx:.3, sy:.6, d:8, wave:1 }
+    ] : [
+      { p:0, sx:-2.4, sy:.2, d:7, yaw:.6 },
+      { at:'#flow', off:-.8, sx:-2.4, sy:.2, d:7, yaw:.6 },
+      { at:'#flow', off:-.2, sx:-.72, sy:.3, d:7, yaw:.7 },
+      { at:'#feats', off:-.3, sx:-2.4, sy:.3, d:7, yaw:.6 },
+      { at:'.cta', off:-.6, sx:2.4, sy:.2, d:6, yaw:-.6 },
+      { at:'.cta', off:-.1, sx:.6, sy:.08, d:5.2, yaw:-.6, wave:1 }
+    ]; }
+  });
+  window.space = space;
+
+  /* ---------- live bot ---------- */
+  var chat = $('#chat'), st = $('#st'), cartN = $('#cartN');
+  var PRODUCTS = [
+    { n:'Эфиопия Иргачеффе', d:'жасмин, бергамот · для турки и пуровера', p:890, bg:['#f6c177','#c0563b'], bag:'#2b1d16', l:'ЭФИОПИЯ' },
+    { n:'Колумбия Супремо', d:'карамель, фундук · универсальный', p:790, bg:['#e8a87c','#7b3f2a'], bag:'#1f2b23', l:'КОЛУМБИЯ' },
+    { n:'Кения АА', d:'смородина, яркая кислинка', p:990, bg:['#f28b82','#6d2c3a'], bag:'#251a2b', l:'КЕНИЯ' },
+    { n:'Бразилия Сантос', d:'шоколад, орех · для эспрессо', p:690, bg:['#d4a373','#5a3825'], bag:'#14202c', l:'БРАЗИЛИЯ' }
+  ];
+  var cart = {}, order = null, queue = Promise.resolve();
+  function rub(v){ return v.toLocaleString('ru-RU') + ' ₽'; }
+  function now(){ var d = new Date(); return (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes(); }
+  function wait(ms){ return new Promise(function(r){ setTimeout(r, SHOT ? 0 : ms); }); }
+  function scrollChat(){ gsap.to(chat, { scrollTop: chat.scrollHeight, duration: .5, ease: 'power2.out' }); }
+  function pop(el, me){ gsap.from(el, { scale: .6, opacity: 0, y: 14, duration: .45, ease: 'back.out(1.8)' }); }
+  function msg(html, who, cls){
+    var m = document.createElement('div'); m.className = 'm ' + who + (cls ? ' ' + cls : '');
+    m.innerHTML = html + (cls === 'prod' || cls === 'inv' ? '' : '<time>' + now() + '</time>');
+    chat.appendChild(m); pop(m); scrollChat(); return m;
+  }
+  function kb(rows, anchor){
+    var k = document.createElement('div'); k.className = 'ikb';
+    rows.forEach(function(row){
+      var r = document.createElement('div'); r.className = 'r';
+      row.forEach(function(b){
+        var bt = document.createElement('button'); bt.type = 'button'; bt.textContent = b[0];
+        bt.addEventListener('click', function(){ act(b[1], k, bt); });
+        r.appendChild(bt);
+      });
+      k.appendChild(r);
+    });
+    chat.appendChild(k); gsap.from(k.children, { y: 10, opacity: 0, duration: .35, stagger: .05, ease: 'power3.out' }); scrollChat(); return k;
+  }
+  function typing(on){
+    st.textContent = on ? 'печатает…' : 'бот'; st.classList.toggle('typing', on);
+    var t = $('.typing-b', chat);
+    if (on && !t) { t = document.createElement('div'); t.className = 'typing-b'; t.innerHTML = '<i></i><i></i><i></i>'; chat.appendChild(t); scrollChat(); }
+    if (!on && t) t.remove();
+  }
+  function bot(fn, delay){
+    queue = queue.then(function(){ typing(true); return wait(delay || 650 + Math.random() * 400); }).then(function(){ typing(false); fn(); });
+    return queue;
+  }
+  function me(text){ msg(text.replace(/</g, '&lt;'), 'me'); }
+  function ptoast(t){ var e = $('#ptoast'); e.textContent = t; gsap.killTweensOf(e); gsap.fromTo(e, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: .35, ease: 'back.out(2)' }); gsap.to(e, { opacity: 0, y: -20, delay: 1.5, duration: .3 }); }
+  function cartCount(){ var n = 0; for (var k in cart) n += cart[k]; return n; }
+  function cartSum(){ var s = 0; for (var k in cart) s += PRODUCTS[k].p * cart[k]; return s; }
+  function updCart(){
+    var n = cartCount(); cartN.textContent = n;
+    gsap.to(cartN, { scale: n ? 1 : 0, duration: .4, ease: 'back.out(3)' });
+    if (n) gsap.fromTo('#cartIc', { rotate: -14 }, { rotate: 0, duration: .6, ease: 'elastic.out(1,.3)' });
+  }
+  var MENU = [[['Каталог', 'cat'], ['Корзина', 'cart']], [['Мой заказ', 'order'], ['Помощь', 'help']]];
+
+  function prodCard(i){
+    var p = PRODUCTS[i];
+    return '<div class="pic" style="background:linear-gradient(135deg,' + p.bg[0] + ',' + p.bg[1] + ')"><div class="bag" data-l="' + p.l + '" style="background:' + p.bag + '"></div></div>' +
+      '<div class="bd"><b>' + p.n + '</b><span>' + p.d + '</span><strong>' + rub(p.p) + ' · 250 г</strong><div class="dots">' + PRODUCTS.map(function(_, j){ return '<i' + (j === i ? ' class="on"' : '') + '></i>'; }).join('') + '</div></div>';
+  }
+  function showCatalog(){
+    bot(function(){
+      var idx = 0, card = msg(prodCard(0), 'bot', 'prod');
+      var k = kb([[['‹', 'prev'], ['В корзину', 'add'], ['›', 'next']], [['Корзина', 'cart']]]);
+      k._card = card; k._idx = function(v){ if (v !== undefined) idx = v; return idx; };
+    }, 700);
+  }
+  function slide(k, dir){
+    var card = k._card, i = (k._idx() + dir + PRODUCTS.length) % PRODUCTS.length; k._idx(i);
+    gsap.to(card, { x: -40 * dir, opacity: 0, duration: .18, ease: 'power2.in', onComplete: function(){
+      card.innerHTML = prodCard(i);
+      gsap.fromTo(card, { x: 40 * dir, opacity: 0 }, { x: 0, opacity: 1, duration: .35, ease: 'power3.out' });
+    } });
+  }
+  function showCart(){
+    var n = cartCount();
+    if (!n) { bot(function(){ msg('Корзина пока пуста. Загляните в каталог: там как раз свежая обжарка.', 'bot'); kb([[['Каталог', 'cat']]]); }); return; }
+    bot(function(){
+      var lines = Object.keys(cart).map(function(k){ return cart[k] + ' × ' + PRODUCTS[k].n + ' — ' + rub(PRODUCTS[k].p * cart[k]); }).join('<br>');
+      msg('<b>Ваша корзина</b><br>' + lines + '<br><br>Итого: <b>' + rub(cartSum()) + '</b>', 'bot');
+      kb([[['Оформить', 'checkout']], [['Ещё кофе', 'cat'], ['Очистить', 'clear']]]);
+    });
+  }
+  function act(a, k, bt){
+    if (a === 'prev' || a === 'next') { slide(k, a === 'next' ? 1 : -1); return; }
+    if (a === 'add') {
+      var i = k._idx(); cart[i] = (cart[i] || 0) + 1; updCart(); ptoast('✓ ' + PRODUCTS[i].n + ' в корзине');
+      gsap.fromTo(bt, { scale: .9 }, { scale: 1, duration: .5, ease: 'elastic.out(1,.4)' }); return;
+    }
+    k.classList.add('used');
+    me(bt.textContent);
+    if (a === 'cat') showCatalog();
+    else if (a === 'cart') showCart();
+    else if (a === 'clear') { cart = {}; updCart(); bot(function(){ msg('Корзина очищена.', 'bot'); kb(MENU); }); }
+    else if (a === 'checkout') bot(function(){ msg('Как доставить заказ?', 'bot'); kb([[['Курьер · 300 ₽', 'd1']], [['Самовывоз · 0 ₽', 'd0']]]); });
+    else if (a === 'd1' || a === 'd0') {
+      var dl = a === 'd1' ? 300 : 0;
+      bot(function(){
+        var lines = Object.keys(cart).map(function(k){ return '<div class="ln"><span>' + cart[k] + ' × ' + PRODUCTS[k].n.split(' ')[0] + '</span><span>' + rub(PRODUCTS[k].p * cart[k]) + '</span></div>'; }).join('');
+        var inv = msg('<div class="hd"><small>СЧЁТ · TELEGRAM PAYMENTS</small><b>Космокофе, новый заказ</b></div>' + lines + '<div class="ln"><span>Доставка</span><span>' + rub(dl) + '</span></div><div class="ln t"><span>Итого</span><span>' + rub(cartSum() + dl) + '</span></div>', 'bot', 'inv');
+        var kk = kb([[['Оплатить ' + rub(cartSum() + dl), 'pay']]]); kk._inv = inv; kk._total = cartSum() + dl;
+      });
+    }
+    else if (a === 'pay') {
+      var total = k._total, inv = k._inv;
+      bt.textContent = 'Обработка…';
+      queue = queue.then(function(){ return wait(1300); }).then(function(){
+        $('.ln.t span', inv).textContent = 'Оплачено ✓'; gsap.fromTo(inv, { scale: 1.04 }, { scale: 1, duration: .6, ease: 'elastic.out(1,.4)' });
+        order = { id: 1043 + Math.floor(Math.random() * 50), total: total, step: 0 }; cart = {}; updCart();
+      });
+      bot(function(){ msg('Спасибо! Заказ <b>#' + order.id + '</b> оплачен. Отслеживайте его прямо здесь:', 'bot'); track(); }, 800);
+    }
+    else if (a === 'order') orderInfo();
+    else if (a === 'help') bot(function(){ msg('Оператор ответит в течение минуты. А пока частые вопросы:', 'bot'); kb([[['Сроки доставки', 'faq1']], [['Возврат', 'faq2']], [['В меню', 'menu']]]); });
+    else if (a === 'faq1') bot(function(){ msg('По городу привозим на следующий день с 10:00 до 22:00. Если заказать до 12:00, то в тот же день.', 'bot'); kb(MENU); });
+    else if (a === 'faq2') bot(function(){ msg('Если кофе не понравился, вернём деньги за нераспечатанную пачку в течение 14 дней. Без вопросов.', 'bot'); kb(MENU); });
+    else if (a === 'menu') bot(function(){ msg('Чем помочь?', 'bot'); kb(MENU); });
+  }
+  function orderInfo(){
+    if (!order) bot(function(){ msg('У вас пока нет заказов. Начнём с каталога?', 'bot'); kb([[['Каталог', 'cat']]]); });
+    else bot(function(){ track(); });
+  }
+  function track(){
+    var steps = ['Принят', 'Обжариваем', 'Курьер в пути', 'Доставлен'];
+    var m = msg('<div class="trk"><b>Заказ #' + order.id + '</b><div class="bar"><i></i></div>' + steps.map(function(s){ return '<div class="st"><i>✓</i>' + s + '</div>'; }).join('') + '</div>', 'bot');
+    var sts = $$('.st', m), bar = $('.bar i', m);
+    function set(n){ sts.forEach(function(s, i){ s.classList.toggle('on', i <= n); }); bar.style.width = ((n + 1) / steps.length * 100) + '%'; }
+    set(order.step);
+    (function adv(){
+      if (order.step >= steps.length - 1) { kb(MENU); return; }
+      setTimeout(function(){ order.step++; set(order.step); if (order.step === 2) ptoast('Курьер Алексей выехал к вам'); adv(); }, SHOT ? 0 : 1600);
+    })();
+  }
+
+  $('#inp').addEventListener('submit', function(e){
+    e.preventDefault();
+    var v = $('#msg').value.trim(); if (!v) return; $('#msg').value = '';
+    $$('.ikb', chat).forEach(function(k){ k.classList.add('used'); });
+    me(v);
+    var t = v.toLowerCase();
+    if (/кофе|каталог|турк|зерн|эспрессо|купить|хочу/.test(t)) { bot(function(){ msg('Подобрал для вас свежую обжарку:', 'bot'); }, 600); showCatalog(); }
+    else if (/корзин/.test(t)) showCart();
+    else if (/заказ|где|доставк/.test(t)) orderInfo();
+    else if (/привет|здравств|хай|добр/.test(t)) bot(function(){ msg('Привет! 👋 Я Orbit, бот «Космокофе». Чем помочь?', 'bot'); kb(MENU); });
+    else bot(function(){ msg('Пока я лучше понимаю кнопки, но учусь каждый день 🙂 Вот что умею:', 'bot'); kb(MENU); });
+  });
+
+  /* greeting */
+  setTimeout(function(){
+    bot(function(){ msg('Привет! Я <b>Orbit</b>, бот магазина «Космокофе» ☕<br>Свежая обжарка с доставкой завтра. Что посмотрим?', 'bot'); kb(MENU); }, 900);
+  }, SHOT ? 0 : 1200);
+
+  /* ---------- 3D phone follows the pointer ---------- */
+  var phone = $('#phone'), ntfs = $$('.ntf');
+  var rY = gsap.quickTo(phone, 'rotationY', { duration: .9, ease: 'power3' }), rX = gsap.quickTo(phone, 'rotationX', { duration: .9, ease: 'power3' });
+  gsap.set(phone, { rotationY: -16, rotationX: 6, transformPerspective: 1600 });
+  if (!coarse) window.addEventListener('pointermove', function(e){
+    if (window.scrollY > innerHeight) return;
+    var nx = e.clientX / innerWidth - .5, ny = e.clientY / innerHeight - .5;
+    rY(-16 + nx * 22); rX(6 - ny * 14);
+    ntfs.forEach(function(n){ var z = +n.dataset.z; gsap.to(n, { x: nx * z * .25, y: ny * z * .2, duration: 1, ease: 'power3.out', overwrite: 'auto' }); });
+  }, { passive: true });
+
+  S.cursor(); S.magnetic('[data-mag]', .25);
+
+  /* ---------- choreography ---------- */
+  gsap.registerPlugin(ScrollTrigger);
+  ScrollTrigger.create({ start: 80, onToggle: function(s){ $('#top').classList.toggle('solid', s.isActive); } });
+  var hw = S.splitWords($('#h1'), true);
+  gsap.from(hw, { yPercent: 115, rotate: 5, duration: 1.1, ease: 'power4.out', stagger: .07, delay: SHOT ? 0 : .3 });
+  gsap.from('.badge,.hero .sub,.hero .ctas,.kpis', { y: 30, opacity: 0, duration: 1, ease: 'power3.out', stagger: .1, delay: SHOT ? 0 : .6 });
+  gsap.from('#phone', { y: 140, rotationY: -60, rotationX: 30, opacity: 0, duration: 1.8, ease: 'power4.out', delay: SHOT ? 0 : .4 });
+  gsap.from('.ntf', { scale: .4, opacity: 0, duration: .9, ease: 'back.out(2)', stagger: .25, delay: SHOT ? 0 : 1.6 });
+  $$('.ntf').forEach(function(n, i){ gsap.to(n, { yPercent: -18, duration: 2.4 + i * .5, ease: 'sine.inOut', yoyo: true, repeat: -1 }); });
+  $$('[data-k]').forEach(function(el){
+    var o = { v: 0 }, to = +el.dataset.k, dec = to % 1 ? 1 : 0;
+    gsap.to(o, { v: to, duration: 2, ease: 'power3.out', delay: SHOT ? 0 : 1, onUpdate: function(){ el.textContent = (el.dataset.pre || '') + o.v.toFixed(dec).replace('.', ','); } });
+  });
+  $$('.rv').forEach(function(h){ gsap.from(S.splitWords(h, true), { yPercent: 115, duration: 1, ease: 'power4.out', stagger: .06, scrollTrigger: { trigger: h, start: 'top 85%' } }); });
+
+  /* story: scroll drives the conversation */
+  var chat2 = $('#chat2'), caps = $$('#caps > div'), stepBars = $$('#steps b'), curStep = -1;
+  var items = $$('[data-s]', chat2);
+  gsap.set(caps[0], { autoAlpha: 1 });
+  function setStep(s){
+    if (s === curStep) return;
+    var prev = curStep; curStep = s;
+    $('#sNum').textContent = '0' + (s + 1);
+    caps.forEach(function(c, i){
+      if (i === s) gsap.fromTo(c, { autoAlpha: 0, y: s > prev ? 40 : -40 }, { autoAlpha: 1, y: 0, duration: .6, ease: 'power3.out', overwrite: true });
+      else if (i === prev) gsap.to(c, { autoAlpha: 0, y: s > prev ? -40 : 40, duration: .4, ease: 'power2.in', overwrite: true });
+    });
+    items.forEach(function(m){
+      var on = +m.dataset.s <= s, was = m._on;
+      m._on = on;
+      if (on && !was) { m.classList.add('in'); gsap.fromTo(m, { scale: .6, opacity: 0, y: 16 }, { scale: 1, opacity: 1, y: 0, duration: .5, ease: 'back.out(1.8)', overwrite: true, delay: (+m.dataset.s === s ? .15 * items.filter(function(x){ return +x.dataset.s === s; }).indexOf(m) : 0) }); }
+      else if (!on && was) gsap.to(m, { opacity: 0, duration: .2, overwrite: true, onComplete: function(){ m.classList.remove('in'); } });
+    });
+    setTimeout(function(){ gsap.to(chat2, { scrollTop: chat2.scrollHeight, duration: .6, ease: 'power2.out' }); }, 120);
+  }
+  ScrollTrigger.create({ trigger: '#story', start: 'top top', end: 'bottom bottom', onUpdate: function(self){
+    var f = self.progress * 6, s = Math.min(5, Math.floor(f));
+    setStep(s);
+    stepBars.forEach(function(b, i){ b.style.transform = 'scaleX(' + S.clamp(f - i, 0, 1).toFixed(3) + ')'; });
+    gsap.set('#phone2', { rotationY: -10 + Math.sin(self.progress * Math.PI * 2) * 8, rotationX: 4, transformPerspective: 1400 });
+  } });
+  setStep(0);
+
+  /* flow diagram */
+  var NS = 'http://www.w3.org/2000/svg';
+  var NODES = [
+    { id:'tg', x:110, y:235, w:150, t:'Telegram', s:'клиенты', info:'<b>Telegram</b>: 900 млн людей, у которых уже установлено «приложение» вашего магазина.' },
+    { id:'crm', x:850, y:55, w:170, t:'amoCRM', s:'сделки', info:'<b>CRM</b>: каждый заказ сразу становится сделкой, а менеджер видит всю переписку.' },
+    { id:'1c', x:850, y:145, w:170, t:'1С · склад', s:'остатки', info:'<b>1С</b>: остатки и цены обновляются в боте автоматически, без ручного копирования.' },
+    { id:'pay', x:850, y:235, w:170, t:'ЮKassa', s:'оплата', info:'<b>Оплата</b>: Telegram Payments через ЮKassa, СБП и карты. Чеки отправляются сами.' },
+    { id:'dlv', x:850, y:325, w:170, t:'Доставка', s:'курьеры', info:'<b>Доставка</b>: статусы от курьерской службы бот пересылает клиенту в реальном времени.' },
+    { id:'an', x:850, y:415, w:170, t:'Аналитика', s:'воронка', info:'<b>Аналитика</b>: видно, где клиенты уходят и какие рассылки окупаются.' }
+  ];
+  var CORE = { x: 450, y: 235 };
+  var gP = $('#paths'), gD = $('#dashes'), gK = $('#packets'), gN = $('#nodes'), paths = [];
+  function el(n, a){ var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; }
+  NODES.forEach(function(n, i){
+    var d = n.id === 'tg' ? 'M' + (n.x + n.w / 2) + ',' + n.y + ' L' + (CORE.x - 70) + ',' + CORE.y : 'M' + (CORE.x + 70) + ',' + CORE.y + ' C' + (CORE.x + 220) + ',' + CORE.y + ' ' + (n.x - 260) + ',' + n.y + ' ' + (n.x - n.w / 2) + ',' + n.y;
+    var p = el('path', { d: d, 'class': 'ln' }); gP.appendChild(p);
+    var ds = el('path', { d: d, 'class': 'dash' }); gD.appendChild(ds);
+    paths.push({ p: p, node: n, len: 0 });
+    var g = el('g', { 'class': 'nd', 'data-i': i, transform: 'translate(' + (n.x - n.w / 2) + ',' + (n.y - 30) + ')' });
+    g.appendChild(el('rect', { width: n.w, height: 60, rx: 16 }));
+    var t1 = el('text', { x: 18, y: 27 }); t1.textContent = n.t; g.appendChild(t1);
+    var t2 = el('text', { x: 18, y: 45, 'class': 's' }); t2.textContent = n.s; g.appendChild(t2);
+    gN.appendChild(g);
+    g.addEventListener('pointerenter', function(){
+      $$('.nd').forEach(function(x){ x.classList.toggle('on', x === g); });
+      paths.forEach(function(pp, j){ pp.p.classList.toggle('hi', j === i); });
+      var fi = $('#flowInfo'); gsap.to(fi, { opacity: 0, y: 6, duration: .15, onComplete: function(){ fi.innerHTML = n.info; gsap.to(fi, { opacity: 1, y: 0, duration: .35, ease: 'power3.out' }); } });
+    });
+  });
+  /* core */
+  var core = el('g', { transform: 'translate(' + CORE.x + ',' + CORE.y + ')' });
+  [70, 54].forEach(function(r, i){ core.appendChild(el('circle', { r: r, fill: i ? 'rgba(42,171,238,.18)' : 'rgba(42,171,238,.08)', stroke: 'rgba(124,240,255,.5)', 'stroke-width': 1.5 })); });
+  core.appendChild(el('circle', { r: 36, fill: '#2aabee' }));
+  core.appendChild(el('ellipse', { rx: 54, ry: 18, fill: 'none', stroke: '#bdf6ff', 'stroke-width': 2, transform: 'rotate(-24)' }));
+  var ct = el('text', { y: 72 + 28, 'text-anchor': 'middle', fill: '#fff', 'font-family': 'Onest', 'font-weight': 800, 'font-size': 17 }); ct.textContent = 'Orbit'; core.appendChild(ct);
+  gN.appendChild(core);
+  var pulse = el('circle', { r: 70, fill: 'none', stroke: '#7cf0ff', 'stroke-width': 2, transform: 'translate(' + CORE.x + ',' + CORE.y + ')' }); gN.insertBefore(pulse, core);
+  gsap.fromTo(pulse, { attr: { r: 60 }, opacity: .8 }, { attr: { r: 120 }, opacity: 0, duration: 2, repeat: -1, ease: 'power2.out' });
+  /* packets */
+  var packets = [];
+  paths.forEach(function(pp, i){
+    pp.len = pp.p.getTotalLength();
+    for (var j = 0; j < 2; j++) { var c = el('circle', { r: 4.5, 'class': 'pk' }); gK.appendChild(c); packets.push({ c: c, pp: pp, t: Math.random(), sp: .25 + Math.random() * .2, dir: (i + j) % 2 ? 1 : -1 }); }
+  });
+  var flowOn = false, lastT = performance.now();
+  new IntersectionObserver(function(es){ flowOn = es[0].isIntersecting; }, { threshold: 0 }).observe($('#flowSvg'));
+  (function tick(nowT){
+    requestAnimationFrame(tick);
+    var dt = Math.min(.05, ((nowT || 0) - lastT) / 1000); lastT = nowT || 0;
+    if (!flowOn) return;
+    packets.forEach(function(k){
+      k.t = (k.t + dt * k.sp) % 1; var u = k.dir > 0 ? k.t : 1 - k.t;
+      var pt = k.pp.p.getPointAtLength(u * k.pp.len);
+      k.c.setAttribute('cx', pt.x.toFixed(1)); k.c.setAttribute('cy', pt.y.toFixed(1));
+      k.c.setAttribute('opacity', Math.sin(k.t * Math.PI).toFixed(2));
+    });
+  })();
+  paths.forEach(function(pp){ pp.p.style.strokeDasharray = pp.len; pp.p.style.strokeDashoffset = pp.len; });
+  gsap.to(paths.map(function(pp){ return pp.p; }), { strokeDashoffset: 0, duration: 1.6, ease: 'power3.inOut', stagger: .1, scrollTrigger: { trigger: '#flowSvg', start: 'top 75%' } });
+  gsap.from('.nd', { scale: .5, opacity: 0, transformOrigin: '50% 50%', duration: .8, ease: 'back.out(2)', stagger: .08, scrollTrigger: { trigger: '#flowSvg', start: 'top 75%' } });
+
+  /* feature cards */
+  S.tilt('.feat', 8, true);
+  gsap.from('.feat', { y: 90, opacity: 0, rotateX: -25, transformPerspective: 900, duration: 1, ease: 'power4.out', stagger: { each: .08, grid: [2, 3], from: 'start' }, scrollTrigger: { trigger: '.feats', start: 'top 82%' } });
+  gsap.from('.cta .btn', { y: 30, opacity: 0, duration: .8, ease: 'back.out(2)', stagger: .1, scrollTrigger: { trigger: '.cta', start: 'top 60%' } });
+})();
+</script>
+</body>
+</html>
