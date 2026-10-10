@@ -126,6 +126,8 @@
       function tick(now) { requestAnimationFrame(tick); if (document.hidden) { last = now; return; } step(now); }
       api.step = function () { step(performance.now()); };
       function step(now) {
+        /* webviews can report a 0×0 window at start-up and never fire resize: keep checking */
+        if (!W || !H) { if (!window.innerWidth || !window.innerHeight) return; size(); resolve(); }
         var dt = Math.min(.05, (now - last) / 1000); last = now;
         var y = window.scrollY;
         velS += ((y - lastY) / Math.max(dt, .001) - velS) * Math.min(1, dt * 6); lastY = y;
