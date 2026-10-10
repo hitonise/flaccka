@@ -16,6 +16,9 @@
 <style>
 :root{--mint:#f0a76c}
 #spaceBg{position:fixed;inset:-2%;width:104%;height:104%;z-index:-1;display:block;background:#020204;will-change:transform}
+/* poster: the first frame is visible even before (or without) the canvas player */
+#spaceBg{background:#020204 url(assets/film/d/0000.webp) center/cover no-repeat}
+@media(max-aspect-ratio:9/10){#spaceBg{background-image:url(assets/film/m/0000.webp)}}
 /* film grain lives on top of the pre-rendered frames (keeps the frames small and the grain alive) */
 .grain{position:fixed;inset:-8%;z-index:0;pointer-events:none;opacity:.045;background-size:180px 180px;will-change:transform;animation:grain 1s steps(6) infinite}
 @media(pointer:coarse){.grain{animation:none;opacity:.035}}

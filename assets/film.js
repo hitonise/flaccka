@@ -50,6 +50,8 @@
         })(order[qi++]);
       }
       pump();
+      /* watchdog: if nothing could be shown after a few seconds, switch decoders and try again */
+      setTimeout(function () { if (!nBmp && blobs[0]) { canBitmap = false; pending[0] = false; decode(0, true); } }, 3500);
 
       /* ---- decoding window around the playhead ---- */
       var KEEP = 18;
@@ -57,8 +59,15 @@
         if (bmps[i] || pending[i] || !blobs[i]) return;
         pending[i] = true;
         var done = function (img) { pending[i] = false; bmps[i] = img; nBmp++; dirty = true; evict(); if (first && o.onFirst) o.onFirst(); };
-        if (canBitmap) createImageBitmap(blobs[i]).then(done, function () { pending[i] = false; });
-        else { var im = new Image(), u = URL.createObjectURL(blobs[i]); im.onload = function () { URL.revokeObjectURL(u); done(im); }; im.src = u; }
+        var viaImg = function () {
+          var im = new Image(), u = URL.createObjectURL(blobs[i]);
+          im.onload = function () { URL.revokeObjectURL(u); done(im); };
+          im.onerror = function () { URL.revokeObjectURL(u); pending[i] = false; };
+          im.src = u;
+        };
+        /* some browsers (older Safari, in-app webviews) refuse ImageBitmap from a WebP blob: fall back to <img> for good */
+        if (canBitmap) createImageBitmap(blobs[i]).then(done, function () { canBitmap = false; viaImg(); });
+        else viaImg();
       }
       function evict() {
         if (nBmp <= KEEP) return;
