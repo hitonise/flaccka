@@ -216,7 +216,8 @@ html.embed .hud{display:none}
   /* ---------- three.js scene ---------- */
   var canvas = $('#grid3d');
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !lite, preserveDrawingBuffer: SHOT });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lite ? 1 : 1.6));
+  var mobileDev = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lite ? .7 : mobileDev ? 1 : 1.25));
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(62, 1, .1, 600);
   camera.position.set(0, 2.4, 9);
@@ -361,6 +362,7 @@ html.embed .hud{display:none}
     composer = new THREE.EffectComposer(renderer);
     composer.addPass(new THREE.RenderPass(scene, camera));
     bloom = new THREE.UnrealBloomPass(new THREE.Vector2(512, 512), .95, .55, .18);
+    var bloomSize = bloom.setSize.bind(bloom); bloom.setSize = function(w, h){ bloomSize(Math.max(2, Math.round(w / 2)), Math.max(2, Math.round(h / 2))); };
     composer.addPass(bloom);
     finalPass = new THREE.ShaderPass({
       uniforms: { tDiffuse: { value: null }, uAb: { value: .002 }, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) } },
@@ -501,7 +503,9 @@ html.embed .hud{display:none}
     }
     if (composer) composer.render(dt); else renderer.render(scene, camera);
   }
-  function frame(now){ requestAnimationFrame(frame); render(now); }
+  /* previews inside the portfolio run at 30 fps; hidden tabs don't render */
+  var lastDraw = 0, minFrame = lite ? 31 : 0;
+  function frame(now){ requestAnimationFrame(frame); if (document.hidden || (minFrame && now - lastDraw < minFrame)) return; lastDraw = now; render(now); }
   requestAnimationFrame(frame);
   window.__nn = { step: function(){ render(performance.now()); } };
 

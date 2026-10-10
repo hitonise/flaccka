@@ -208,7 +208,7 @@ h1.big em,.h2 em{font-family:var(--f-i);font-weight:500;letter-spacing:-.02em;co
   /* ---------- three ---------- */
   var canvas = $('#blob');
   var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, preserveDrawingBuffer: SHOT });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, lite ? .8 : 1.5));
   renderer.setClearColor(0x000000, 0);
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(35, 1, .1, 100); camera.position.set(0, 0, 6);
@@ -294,7 +294,7 @@ h1.big em,.h2 em{font-family:var(--f-i);font-weight:500;letter-spacing:-.02em;co
       '}'
     ].join('\n')
   });
-  var blob = new THREE.Mesh(new THREE.IcosahedronGeometry(1, lite ? 28 : 56), blobMat);
+  var blob = new THREE.Mesh(new THREE.IcosahedronGeometry(1, lite ? 22 : 40), blobMat);
   scene.add(blob);
 
   /* soft contact shadow */
@@ -482,7 +482,8 @@ h1.big em,.h2 em{font-family:var(--f-i);font-weight:500;letter-spacing:-.02em;co
   }
   var uiHover = false;
   document.addEventListener('pointerover', function(e){ uiHover = !!interactiveTarget(e.target); });
-  function frame(now){ requestAnimationFrame(frame); render(now); }
+  var lastDraw = 0, minFrame = lite ? 31 : 0;
+  function frame(now){ requestAnimationFrame(frame); if (document.hidden || (minFrame && now - lastDraw < minFrame)) return; lastDraw = now; render(now); }
   requestAnimationFrame(frame);
 
   /* ---------- page choreography ---------- */
