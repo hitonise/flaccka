@@ -9,20 +9,20 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/site.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<link rel="preload" as="fetch" crossorigin href="assets/film/d/0000.webp" media="(min-aspect-ratio: 9/10)">
+<link rel="preload" as="fetch" crossorigin href="assets/film/m/0000.webp" media="(max-aspect-ratio: 9/10)">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <style>
 :root{--mint:#f0a76c}
-#spaceBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
+#spaceBg{position:fixed;inset:-2%;width:104%;height:104%;z-index:-1;display:block;background:#020204;will-change:transform}
+/* film grain lives on top of the pre-rendered frames (keeps the frames small and the grain alive) */
+.grain{position:fixed;inset:-8%;z-index:0;pointer-events:none;opacity:.045;background-size:180px 180px;will-change:transform;animation:grain 1s steps(6) infinite}
+@media(pointer:coarse){.grain{animation:none;opacity:.035}}
+html.hide-hud .grain{animation-play-state:paused}
+@keyframes grain{0%{transform:translate(0,0)}20%{transform:translate(-4%,3%)}40%{transform:translate(3%,-5%)}60%{transform:translate(-6%,-2%)}80%{transform:translate(5%,4%)}100%{transform:translate(0,0)}}
+@media(prefers-reduced-motion:reduce){.grain{animation:none}}
+#spaceBg{image-rendering:auto}
 body{background:transparent}
 .wrap{width:min(1240px,100% - 56px);margin:0 auto}
 @media(max-width:640px){.wrap{width:calc(100% - 36px)}}
@@ -203,7 +203,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
 </head>
 <body>
 
-<canvas id="spaceBg"></canvas>
+<canvas id="spaceBg"></canvas><div class="grain" aria-hidden="true"></div>
 <div id="loader"><div class="ld-t">flaccka<b>.</b> подготовка к запуску</div><div class="ld-bar"><i></i></div></div>
 <div class="lb t" aria-hidden="true"></div><div class="lb b" aria-hidden="true"></div>
 <div class="titles" aria-hidden="true"><div class="t1">flaccka представляет</div><div class="t2">Сайты, в которых хочется остаться</div></div>
@@ -307,15 +307,14 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
       <div class="foot">
         <span>flaccka © <span id="yr"></span> · код вручную, без шаблонов</span>
         <button type="button" id="toTop">к старту ↑</button>
-        <span class="credit sf">3D-модель космонавта: <a href="https://sketchfab.com/3d-models/astronaut-77467ae24cdf47ddaf4fd0dbbd090fdf" target="_blank" rel="noopener">«astronaut»</a> — 685sketchfab.com, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, поза и анимация добавлены</span>
-        <span class="credit jt">3D-модель космонавта: <a href="https://poly.pizza/m/0oBRDJ9Zl9" target="_blank" rel="noopener">«Rigged Astronaut»</a> — J-Toastie, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>, поза и анимация добавлены</span>
+        <span class="credit jt" style="display:block">3D-модель космонавта: <a href="https://poly.pizza/m/0oBRDJ9Zl9" target="_blank" rel="noopener">«Rigged Astronaut»</a> — J-Toastie, <a href="https://creativecommons.org/licenses/by/3.0/" target="_blank" rel="noopener">CC BY 3.0</a>; шлем, поза, свет и рендер — flaccka</span>
       </div>
     </div>
   </section>
 </main>
 
 <script src="assets/site.js"></script>
-<script src="assets/space.js"></script>
+<script src="assets/film.js"></script>
 <script src="assets/shot.js"></script>
 <script>
 (function(){
@@ -438,35 +437,38 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
     });
   })();
 
-  /* ---------- 3D space ---------- */
-  /* studio framing: full figure centre-frame → slow push-in to the helmet → exit → return to wave goodbye */
-  var keys = function(aspect){ return aspect < 1 ? [
-    { at:'#hero', p:0, sx:0, sy:.32, d:7.2, yaw:-.2, tilt:-.18, roll:-.04 },
-    { at:'#about', off:-.2, sx:0, sy:-.05, d:3.4, yaw:.3, tilt:-.1, roll:-.05 },
-    { at:'#about', off:.5, sx:0, sy:-.05, d:3.4, yaw:.4, tilt:-.1, roll:-.05 },
-    { at:'#work', off:0, sx:2.2, sy:.5, d:9, yaw:.6 },
-    { at:'#contact', off:-.5, sx:2.2, sy:.5, d:9, yaw:-.5 },
-    { at:'#contact', off:0, sx:.25, sy:.5, d:7.5, yaw:-.5, wave:1 }
-  ] : [
-    { at:'#hero', p:0, sx:.02, sy:-.02, d:4.5, yaw:-.22, tilt:-.18, roll:-.04 },
-    { at:'#about', off:-.25, sx:-.36, sy:-.78, d:2.9, yaw:.58, tilt:-.08, roll:-.06 },
-    { at:'#about', off:.55, sx:-.38, sy:-.8, d:2.7, yaw:.7, tilt:-.08, roll:-.06 },
-    { at:'#work', off:-.25, sx:-2.2, sy:.1, d:6, yaw:.8 },
-    { at:'#contact', off:-.7, sx:2, sy:.2, d:6, yaw:-.6 },
-    { at:'#contact', off:-.1, sx:.56, sy:-.04, d:4.8, yaw:-.55, wave:1 }
-  ]; };
+  /* ---------- film: pre-rendered sequence scrubbed by scroll ---------- */
+  /* film timeline: 0–.27 approach over the shoulder · .45–.56 helmet close-up · .6–.86 orbit to the planet · → sunrise */
   var hudDist = $('#hudDist'), hudVel = $('#hudVel'), hudT = 0;
-  var space = window.SpaceBG && SpaceBG.init({
-    astroKeys: keys, intro: true, studio: true,
-    grade: { sat: .3, warm: 1, contrast: .38, crush: .035, cool: 1, vig: .8, grain: .05, bloom: .42 },
-    onFrame: function(st, t, dt){
-      hudT += dt; if (hudT < .1) return; hudT = 0;
-      hudDist.textContent = ((1 - st.p) * 412).toFixed(1);
+  var film = window.Film && Film.init({
+    canvas: '#spaceBg', base: 'assets/film/', frames: 200,
+    anchors: [
+      { s: 0, u: 0 },
+      { at: '#about', off: -.35, u: .44 },
+      { at: '#about', edge: 'bottom', off: -1, u: .57 },
+      { at: '#work', off: 0, u: .63 },
+      { at: '#work', edge: 'bottom', off: -1, u: .86 },
+      { at: '#contact', off: -.6, u: .95 },
+      { end: true, u: 1 }
+    ],
+    onFrame: function(st){
+      if (++hudT % 6) return;
+      hudDist.textContent = ((1 - st.u) * 412).toFixed(1);
       hudVel.textContent = (st.vel * .99).toFixed(2);
     }
   });
-  window.space = space;
-  if (/[?&]shot/.test(location.search)) window.snap = async function(n, f){ var H = document.documentElement.scrollHeight - innerHeight; if (f != null) window.scrollTo(0, H * f); for (var i=0;i<3;i++) space.step(); await fetch('/shot?n=' + n, { method:'POST', body: document.getElementById('spaceBg').toDataURL('image/jpeg', .72) }); return 'ok'; };
+  window.film = film;
+  /* the frame breathes with the pointer: a few pixels of parallax sell the depth */
+  (function(){
+    var bg = $('#spaceBg'); if (!window.gsap || matchMedia('(pointer:coarse)').matches || S.RM) return;
+    var px = gsap.quickTo(bg, 'x', { duration: 1.4, ease: 'power3' }), py = gsap.quickTo(bg, 'y', { duration: 1.4, ease: 'power3' });
+    window.addEventListener('pointermove', function(e){ px(-(e.clientX / innerWidth - .5) * 18); py(-(e.clientY / innerHeight - .5) * 12); }, { passive: true });
+  })();
+  /* grain tile */
+  (function(){ var c = document.createElement('canvas'); c.width = c.height = 180; var x = c.getContext('2d'), d = x.createImageData(180, 180);
+    for (var i = 0; i < d.data.length; i += 4) { var v = Math.random() * 255; d.data[i] = d.data[i+1] = d.data[i+2] = v; d.data[i+3] = 255; }
+    x.putImageData(d, 0, 0); $('.grain').style.backgroundImage = 'url(' + c.toDataURL() + ')'; })();
+  if (/[?&]shot/.test(location.search)) window.snap = async function(n, f){ var H = document.documentElement.scrollHeight - innerHeight; if (f != null) window.scrollTo(0, H * f); await new Promise(function(r){ setTimeout(r, 1200); }); await fetch('/shot?n=' + n, { method:'POST', body: document.getElementById('spaceBg').toDataURL('image/jpeg', .72) }); return 'ok'; };
 
   /* ---------- interactions ---------- */
   S.cursor(); S.copyEmail($('#mailCard'), 'hitoniseoff@gmail.com');
@@ -507,9 +509,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
   });
 
   /* nav + rail + HUD sector */
-  ScrollTrigger.create({ trigger: '#stack', start: 'top 85%', end: 'bottom 40%', toggleClass: { targets: document.documentElement, className: 'hide-hud' },
-    /* while the opaque project cards cover the sky, the background renders at a lower frame rate and gives the GPU to the demo */
-    onToggle: function(self){ if (space) space.setFps(self.isActive ? 24 : 0); } });
+  ScrollTrigger.create({ trigger: '#stack', start: 'top 85%', end: 'bottom 40%', toggleClass: { targets: document.documentElement, className: 'hide-hud' } });
 
   /* chapter title cards: thin letterbox + caption whenever a new section takes the screen */
   var lbT = $('.lb.t'), lbB = $('.lb.b'), introDone = false, chTl = null;
@@ -533,7 +533,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
     if (window.scrollY > innerHeight) return;
     tRY((e.clientX / innerWidth - .5) * 10); tRX(-(e.clientY / innerHeight - .5) * 7);
   }, { passive: true });
-  gsap.to('.hero-l,.hero-r', { y: -80, opacity: 0, filter: 'blur(10px)', ease: 'none', stagger: .05, scrollTrigger: { trigger: '#hero', start: 'top top', end: '70% top', scrub: true } });
+  gsap.to('.hero-l,.hero-r', { y: -80, opacity: 0, ease: 'none', stagger: .05, scrollTrigger: { trigger: '#hero', start: 'top top', end: '70% top', scrub: true } });
   ScrollTrigger.create({ trigger: '.c-grid', start: 'top 70%', end: 'max', toggleClass: { targets: document.documentElement, className: 'hide-hud2' } });
   var hudSec = $('#hudSec');
   $$('main > section').forEach(function(sec){
@@ -557,7 +557,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
     if (introTl) introTl.kill();
     gsap.to([lbT, lbB], { scaleY: 0, duration: .9, ease: 'expo.inOut' });
     gsap.to('.titles .t1,.titles .t2,.skip', { opacity: 0, duration: .4, onComplete: function(){ $('.titles').style.display = 'none'; $('.skip').style.display = 'none'; } });
-    if (space) space.skipIntro();
+    gsap.to('#spaceBg', { scale: 1, filter: 'brightness(1) blur(0px)', duration: .8, ease: 'power2.out', clearProps: 'filter' });
     if (heroChars[0] && gsap.getProperty(heroChars[0], 'opacity') < .5) revealHero();
   }
   $('#skipIntro').addEventListener('click', finishIntro);
@@ -567,14 +567,13 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
   setTimeout(function(){ if (!introDone) finishIntro(); }, 15000);
 
   window.addEventListener('site:loaded', function(){
-    if (space) space.kick();
-    ScrollTrigger.refresh(); if (space) space.refresh();
+    ScrollTrigger.refresh(); if (film) film.refresh();
     if (shot || S.RM || S.embed) { introDone = true; gsap.set([lbT, lbB], { scaleY: 0 }); $('.titles').style.display = 'none'; $('.skip').style.display = 'none'; revealHero(); return; }
     introTl = gsap.timeline({ onComplete: function(){ introDone = true; $('.titles').style.display = 'none'; $('.skip').style.display = 'none'; } })
       .to('.skip', { opacity: 1, duration: .6 }, .2)
       .fromTo('.titles .t1', { opacity: 0, letterSpacing: '1.2em' }, { opacity: 1, letterSpacing: '.6em', duration: 1.4, ease: 'expo.out' }, .2)
       .to('.titles .t1', { opacity: 0, duration: .5 }, 1.6)
-      .add(function(){ if (space) space.playIntro(3.6); }, 1.7)
+      .fromTo('#spaceBg', { scale: 1.28, filter: 'brightness(0) blur(6px)' }, { scale: 1, filter: 'brightness(1) blur(0px)', duration: 4.2, ease: 'power3.inOut', clearProps: 'filter' }, 1.5)
       .to([lbT, lbB], { scaleY: .26, duration: 1.6, ease: 'expo.inOut' }, 1.8)
       .fromTo('.titles .t2', { opacity: 0, y: 20, filter: 'blur(10px)' }, { opacity: 1, y: 0, filter: 'blur(0px)', duration: 1.2, ease: 'expo.out' }, 2.3)
       .to('.titles .t2', { opacity: 0, y: -10, filter: 'blur(6px)', duration: .7, ease: 'power2.in' }, 3.9)
@@ -582,7 +581,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
       .to('.skip', { opacity: 0, duration: .4 }, 4.3)
       .add(revealHero, 4.6);
   });
-  ScrollTrigger.addEventListener('refresh', function(){ if (space) space.refresh(); });
+  ScrollTrigger.addEventListener('refresh', function(){ if (film) film.refresh(); });
 
   S.magnetic('[data-mag]', .28);
   S.loader(1100);
