@@ -41,10 +41,11 @@
   ];
 
   var FinalShader = {
-    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uShift: { value: 0 }, uVig: { value: .55 }, uGrain: { value: .035 } },
+    uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uShift: { value: 0 }, uVig: { value: .55 }, uGrain: { value: .035 },
+      uSat: { value: 1.1 }, uWarmKeep: { value: 0 }, uContrast: { value: 0 }, uCrush: { value: 0 }, uCool: { value: 0 } },
     vertexShader: 'varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
     fragmentShader: [
-      'uniform sampler2D tDiffuse; uniform float uTime,uShift,uVig,uGrain; varying vec2 vUv;',
+      'uniform sampler2D tDiffuse; uniform float uTime,uShift,uVig,uGrain,uSat,uWarmKeep,uContrast,uCrush,uCool; varying vec2 vUv;',
       'void main(){',
       '  vec2 c = vUv-.5; float d = length(c);',
       '  vec2 off = c*uShift*(.4+d*1.6);',
@@ -54,10 +55,14 @@
       '  col += (g-.5)*uGrain;',
       '  vec3 ac = (col*(2.51*col+.03))/(col*(2.43*col+.59)+.14);',
       '  col = mix(col, clamp(ac,0.,1.), .75);',
-      /* film grade: teal shadows, warm highlights, a touch more saturation */
+      /* film grade: split-tone, selective saturation (warm accents survive), S-curve contrast, crushed blacks */
       '  float l = dot(col, vec3(.299,.587,.114));',
       '  col = mix(col*vec3(.9,1.0,1.1), col*vec3(1.1,1.0,.88), smoothstep(.12,.7,l));',
-      '  col = mix(vec3(l), col, 1.1);',
+      '  float warm = smoothstep(.12,.32, col.r - col.b);',
+      '  col = mix(vec3(l), col, mix(uSat, 1.15, warm*uWarmKeep));',
+      '  col += vec3(-.012,.0,.022)*(1.0-smoothstep(.0,.45,l))*uCool;',
+      '  col = clamp(max(col - uCrush, 0.0)/(1.0 - uCrush), 0.0, 1.0);',
+      '  col = mix(col, col*col*(3.0-2.0*col), uContrast);',
       '  gl_FragColor = vec4(col,1.0);',
       '}'
     ].join('\n')
@@ -93,6 +98,12 @@
     blob(256, 240, 140, 'rgba(255,120,60,.45)');
     blob(30, 140, 70, 'rgba(140,255,200,.35)');
     x.fillStyle = 'rgba(255,255,255,.08)'; x.fillRect(0, 118, 512, 6);
+    /* a warm banded planet for the visor to reflect */
+    x.save(); x.beginPath(); x.arc(190, 150, 34, 0, Math.PI * 2); x.clip();
+    var pg = x.createLinearGradient(160, 120, 220, 184); pg.addColorStop(0, '#ffb066'); pg.addColorStop(.55, '#c8582a'); pg.addColorStop(1, '#2a0d06');
+    x.fillStyle = pg; x.fillRect(150, 110, 80, 80);
+    for (var bi = 0; bi < 7; bi++) { x.fillStyle = 'rgba(255,' + (150 + bi * 10) + ',90,.18)'; x.fillRect(150, 122 + bi * 9, 80, 3); }
+    x.restore();
     var t = new THREE.CanvasTexture(c);
     t.mapping = THREE.EquirectangularReflectionMapping;
     return t;
@@ -291,9 +302,22 @@
     return { model: model, bones: bones };
   }
 
+  /* average normals across vertices that share a position: low-poly facets read as smooth, sculpted surfaces */
+  function smoothNormals(g) {
+    var p = g.attributes.position, n = g.attributes.normal; if (!p || !n) return;
+    var acc = {}, keys = new Array(p.count), i, k, a;
+    for (i = 0; i < p.count; i++) {
+      k = Math.round(p.getX(i) * 1e4) + '_' + Math.round(p.getY(i) * 1e4) + '_' + Math.round(p.getZ(i) * 1e4); keys[i] = k;
+      a = acc[k] || (acc[k] = [0, 0, 0]); a[0] += n.getX(i); a[1] += n.getY(i); a[2] += n.getZ(i);
+    }
+    for (i = 0; i < p.count; i++) { a = acc[keys[i]]; var l = Math.hypot(a[0], a[1], a[2]) || 1; n.setXYZ(i, a[0] / l, a[1] / l, a[2] / l); }
+    n.needsUpdate = true;
+  }
+
   /* ---------- glTF astronaut: tune materials, normalise size, prepare bone posing ---------- */
   function prepareModel(gltf, envTex, opts) {
     var model = gltf.scene, mixamo = false;
+    model.traverse(function (o) { if (o.isMesh && o.geometry && o.geometry.attributes.normal && o.geometry.attributes.position.count < 120000) smoothNormals(o.geometry); });
     model.traverse(function (o) { if (o.isBone && /mixamorig/i.test(o.name)) mixamo = true; });
     if (!mixamo || (opts && opts.forceAuto)) return autoRig(model, envTex, opts && opts.yaw);
     model.traverse(function (o) {
@@ -301,7 +325,7 @@
       o.frustumCulled = false;
       var m = o.material, nm = (m.name || '').toLowerCase();
       if (nm.indexOf('mask') >= 0) { m.color.setHex(0xd8a23f); m.metalness = 1; m.roughness = .08; m.envMapIntensity = 2.1; }
-      else if (nm.indexOf('white') >= 0) { m.color.setHex(0xbfc1c9); m.metalness = .03; m.roughness = .72; m.envMapIntensity = .45; }
+      else if (nm.indexOf('white') >= 0) { m.color.setHex(0xa9acb4); m.metalness = .03; m.roughness = .6; m.envMapIntensity = .5; }
       else if (nm.indexOf('gray') >= 0 || nm.indexOf('grey') >= 0) { m.color.setHex(0x4a4c55); m.metalness = .45; m.roughness = .45; m.envMapIntensity = .9; }
       else { m.metalness = Math.min(m.metalness, .2); m.envMapIntensity = .7; }
       m.envMap = envTex; m.needsUpdate = true;
@@ -376,6 +400,16 @@
     keyLight.position.set(-4, 5, 6); camera.add(keyLight); keyLight.target.position.set(0, 0, -10); camera.add(keyLight.target);
     var rimLight = new THREE.PointLight(0x6f86ff, 1.4, 40); scene.add(rimLight);
     var sunDir = sunPos.clone().sub(planetPos).normalize();
+    /* studio rig: hard side key, strong cool back-rim, very little fill → sculpted, high-contrast subject */
+    var studio = !!o.studio, backdrop = null;
+    if (studio) {
+      scene.children.forEach(function (c) { if (c.isAmbientLight) c.intensity = .08; if (c.isHemisphereLight) c.intensity = .22; });
+      keyLight.intensity = 1.15; keyLight.color.setHex(0xeef1f8); keyLight.position.set(6, 4.5, 3.5);
+      rimLight.intensity = 2.4; rimLight.distance = 30; rimLight.color.setHex(0xc4d0ff); sunLight.intensity = 1.1;
+      var bdTex = radialTexture(256, [[0, 'rgba(150,160,180,.55)'], [.35, 'rgba(80,88,104,.28)'], [.7, 'rgba(30,34,44,.08)'], [1, 'rgba(0,0,0,0)']]);
+      backdrop = new THREE.Sprite(new THREE.SpriteMaterial({ map: bdTex, transparent: true, depthWrite: false, opacity: .9 }));
+      backdrop.renderOrder = -5; scene.add(backdrop);
+    }
 
     /* nebula dome — baked once into an equirect texture instead of 15 noise lookups per pixel per frame */
     var nebTex = bake(renderer, low ? 1024 : 2048, low ? 512 : 1024,
@@ -394,6 +428,7 @@
       { uA: { value: new THREE.Color(o.nebula[0]) }, uB: { value: new THREE.Color(o.nebula[1]) }, uC: { value: new THREE.Color(o.nebula[2]) } });
     var dome = new THREE.Mesh(new THREE.SphereGeometry(900, 48, 24), new THREE.MeshBasicMaterial({ map: nebTex, side: THREE.BackSide, depthWrite: false, fog: false }));
     dome.renderOrder = -20; dome.frustumCulled = false; scene.add(dome);
+    if (o.studio) dome.material.color.setScalar(.55);
 
     /* stars */
     function makeStars(n, rMin, rMax, sizeMin, sizeMax, atten, tubeFn) {
@@ -792,7 +827,7 @@
           return {
             sx: lerp(a.sx, b.sx, t), sy: lerp(a.sy, b.sy, t), d: lerp(a.d, b.d, t), yaw: lerp(a.yaw || 0, b.yaw || 0, t),
             scale: lerp(a.scale == null ? 1 : a.scale, b.scale == null ? 1 : b.scale, t), wave: lerp(a.wave || 0, b.wave || 0, t),
-            tilt: lerp(a.tilt || 0, b.tilt || 0, t)
+            tilt: lerp(a.tilt || 0, b.tilt || 0, t), roll: lerp(a.roll == null ? -.28 : a.roll, b.roll == null ? -.28 : b.roll, t)
           };
         }
       }
@@ -801,16 +836,23 @@
 
     /* post-processing: bloom runs at half resolution */
     var composer = null, bloom = null, finalPass = null, postOn = false;
-    var canPost = o.bloom && !low && !/[?&]nopost/.test(location.search) && THREE.EffectComposer && THREE.RenderPass && THREE.UnrealBloomPass && THREE.ShaderPass && THREE.CopyShader;
+    /* the grading pass runs everywhere except tiny previews; bloom only where the GPU can afford it */
+    var canPost = !o.lite && !/[?&]nopost/.test(location.search) && THREE.EffectComposer && THREE.RenderPass && THREE.ShaderPass && THREE.CopyShader;
+    var G = o.grade || {};
     function setupPost() {
       composer = new THREE.EffectComposer(renderer);
       composer.setPixelRatio(Q.dpr); composer.setSize(W, H);
       composer.addPass(new THREE.RenderPass(scene, camera));
-      bloom = new THREE.UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), .55, .5, .84);
-      var bs = bloom.setSize.bind(bloom);
-      bloom.setSize = function (w, h) { bs(Math.max(2, Math.round(w * .5)), Math.max(2, Math.round(h * .5))); };
-      composer.addPass(bloom);
+      if (o.bloom && !low && THREE.UnrealBloomPass) {
+        bloom = new THREE.UnrealBloomPass(new THREE.Vector2(W / 2, H / 2), G.bloom != null ? G.bloom : .55, .5, .84);
+        var bs = bloom.setSize.bind(bloom);
+        bloom.setSize = function (w, h) { bs(Math.max(2, Math.round(w * .5)), Math.max(2, Math.round(h * .5))); };
+        composer.addPass(bloom);
+      }
       finalPass = new THREE.ShaderPass(FinalShader); finalPass.renderToScreen = true;
+      var fu = finalPass.uniforms;
+      if (G.sat != null) fu.uSat.value = G.sat; if (G.warm != null) fu.uWarmKeep.value = G.warm; if (G.contrast != null) fu.uContrast.value = G.contrast;
+      if (G.crush != null) fu.uCrush.value = G.crush; if (G.cool != null) fu.uCool.value = G.cool; if (G.vig != null) fu.uVig.value = G.vig; if (G.grain != null) fu.uGrain.value = G.grain;
       composer.addPass(finalPass);
       postOn = true;
     }
@@ -874,7 +916,8 @@
       var target = minFrame ? 1000 / (minFrame + 2) - 4 : 50;
       if (fps < target) {
         perf.good = 0;
-        if (Q.dpr > Q.min + .02) { Q.ceil = Math.max(Q.min, Q.dpr - .05); applyDpr(Math.max(Q.min, Q.dpr * .8)); }
+        if (bloom && bloom.enabled) { bloom.enabled = false; }
+        else if (Q.dpr > Q.min + .02) { Q.ceil = Math.max(Q.min, Q.dpr - .05); applyDpr(Math.max(Q.min, Q.dpr * .8)); }
         else if (postOn) { postOn = false; document.documentElement.classList.add('perf-lite'); }
         else document.documentElement.classList.add('perf-lite');
       } else if (fps > target + 8) {
@@ -1040,8 +1083,13 @@
         var sc = (key.scale == null ? 1 : key.scale) * (rig ? (rig.rig === 'gltf' ? 1 - Math.pow(1 - astroIn, 3) : 1) : 0) * smooth(1 - introK * 1.6);
         astro.scale.setScalar(Math.max(.0001, sc));
         astro.visible = sc > .01 && Math.abs(key.sx) < 2.4;
+        if (backdrop) {
+          backdrop.position.copy(astro.position).addScaledVector(tmpF, 9).addScaledVector(tmpU, .6);
+          backdrop.scale.set(18 + d * 1.5, 18 + d * 1.5, 1);
+          backdrop.material.opacity = astro.visible ? .95 * smooth(1 - Math.abs(key.sx) / 1.4) * Math.min(1, sc * 1.2) : 0;
+        }
 
-        eul.set(.22 + (key.tilt || 0) + Math.sin(time * .45) * .06 * drift, (key.yaw || 0) + Math.sin(time * .3) * .14 * drift, -.28 + Math.sin(time * .38) * .09 * drift);
+        eul.set(.22 + (key.tilt || 0) + Math.sin(time * .45) * .06 * drift, (key.yaw || 0) + Math.sin(time * .3) * .14 * drift, (key.roll == null ? -.28 : key.roll) + Math.sin(time * .38) * .09 * drift);
         tmpQ.setFromEuler(eul);
         astro.quaternion.copy(camera.quaternion).multiply(tmpQ);
 
@@ -1079,7 +1127,7 @@
       if (postOn && composer) {
         finalPass.uniforms.uTime.value = time % 100;
         finalPass.uniforms.uShift.value = RM ? 0 : velN * .012;
-        bloom.strength = .55 + velN * .45;
+        if (bloom) bloom.strength = (G.bloom != null ? G.bloom : .55) + velN * .45;
         composer.render(dt);
       } else renderer.render(scene, camera);
     }

@@ -21,6 +21,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <style>
+:root{--mint:#f0a76c}
 #spaceBg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;display:block}
 body{background:transparent}
 .wrap{width:min(1240px,100% - 56px);margin:0 auto}
@@ -57,11 +58,19 @@ html.hide-hud .rail{opacity:0;transform:translate(14px,-50%);pointer-events:none
 @media(max-width:900px){.hud,.rail{display:none}}
 
 /* hero */
-.hero{position:relative;min-height:100vh;display:flex;align-items:flex-end;padding:120px 0 120px}
-.hero .wrap{position:relative}
-.hero h1{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(96px,17vw,280px);line-height:.82;margin:18px 0 0;letter-spacing:-.02em;text-shadow:0 10px 60px rgba(0,0,0,.45)}
+.hero{position:relative;height:100vh;min-height:620px}
+.hero-l{position:absolute;left:max(34px,5vw);top:50%;transform:translateY(-46%);max-width:min(440px,34vw);perspective:1200px}
+.hero-r{position:absolute;right:max(34px,5vw);top:50%;transform:translateY(-10%);max-width:300px}
+.hero-r h3{font-family:var(--f-sans);font-weight:400;font-size:clamp(22px,1.9vw,30px);letter-spacing:-.02em;margin:0 0 12px}
+.hero-r h3 em{font-family:var(--f-serif);font-style:italic}
+.hero-r p{font-size:14px;line-height:1.65;color:#a9a8b6;margin:0}
+.hero-r .ctas{margin-top:26px}
+.hero-r .btn{padding:13px 20px;font-size:13px}
+.hero h1{font-family:var(--f-sans);font-weight:400;font-size:clamp(46px,5.4vw,90px);line-height:.98;margin:22px 0 0;letter-spacing:-.045em;transform-style:preserve-3d;will-change:transform}
+.hero h1 .w,.hero h1 em{display:block}
+.hero h1 em{font-family:var(--f-serif);font-style:italic;letter-spacing:-.01em;font-size:1.08em}
 .hero h1 .char{transform-origin:50% 100%}
-.hero .sub{max-width:520px;font-size:clamp(16px,1.5vw,19px);color:#cfcdd9;margin:44px 0 0}
+.hero .sub{max-width:340px;font-size:15px;line-height:1.6;color:#a9a8b6;margin:26px 0 0}
 .hero .sub b{color:#fff;font-weight:500}
 .ctas{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px}
 .btn{position:relative;display:inline-flex;align-items:center;gap:12px;padding:16px 26px;border-radius:999px;font-size:14px;letter-spacing:.02em;border:1px solid rgba(255,255,255,.28);background:rgba(10,11,20,.62);overflow:hidden;transition:border-color .3s,color .3s}
@@ -80,14 +89,16 @@ section{position:relative}
 .sec-hd .num{font-family:var(--f-mono);font-size:12px;letter-spacing:.2em;color:var(--mint)}
 .sec-hd h2{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(46px,6.4vw,104px);line-height:.95;margin:0;letter-spacing:-.01em}
 
-.about{padding:24vh 0 18vh}
-.about .wrap{display:grid;grid-template-columns:1fr minmax(0,780px);gap:40px}
-.about .lead{font-size:clamp(26px,3.3vw,50px);line-height:1.16;font-weight:400;margin:0;letter-spacing:-.01em}
+.about{padding:30vh 0 30vh;min-height:140vh}
+.about .wrap{display:grid;grid-template-columns:1fr minmax(0,560px);gap:40px}
+.ab-h{font-family:var(--f-sans);font-weight:400;font-size:clamp(40px,4.4vw,76px);line-height:1;letter-spacing:-.04em;margin:0 0 34px}
+.ab-h em{font-family:var(--f-serif);font-style:italic;letter-spacing:-.01em;color:var(--mint)}
+.about .lead{font-size:clamp(18px,1.6vw,23px);line-height:1.55;font-weight:400;margin:0;color:#c9c8d2}
 .about .lead em{font-family:var(--f-serif);font-style:italic;color:var(--mint)}
 .about .facts{margin-top:44px;display:flex;flex-wrap:wrap;gap:10px}
 .chip{font-family:var(--f-mono);font-size:12px;letter-spacing:.04em;padding:10px 16px;border-radius:999px;border:1px solid var(--line);background:rgba(10,11,20,.6);transition:border-color .3s,color .3s,transform .3s}
 .chip:hover{border-color:var(--mint);color:var(--mint);transform:translateY(-3px)}
-@media(max-width:900px){.about .wrap{grid-template-columns:1fr}}
+@media(max-width:900px){.about .wrap{grid-template-columns:1fr}.hero-l{top:auto;bottom:150px;transform:none;max-width:none;right:24px}.hero-r{display:none}.hero h1{font-size:clamp(40px,11vw,64px)}}
 
 /* work */
 .work{padding:16vh 0 10vh}
@@ -186,9 +197,6 @@ html[data-astro=sketchfab] .credit.sf,html[data-astro=jtoastie] .credit.jt{displ
 .chapter{position:fixed;left:50%;bottom:calc(7vh + 22px);transform:translateX(-50%);z-index:9992;pointer-events:none;text-align:center;opacity:0}
 .chapter small{display:block;font-family:var(--f-mono);font-size:11px;letter-spacing:.5em;text-transform:uppercase;color:var(--mint);margin-bottom:8px}
 .chapter b{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(22px,2.4vw,34px);color:#f4f2ee;letter-spacing:.02em;white-space:nowrap}
-.hero .wrap{perspective:1200px}
-.hero h1{transform-style:preserve-3d;will-change:transform;
-  text-shadow:1px 1px 0 #c9c7d6,2px 2px 0 #a9a7b8,3px 3px 0 #8d8b9e,4px 4px 0 #737186,5px 5px 0 #5d5b70,6px 6px 0 #4a4859,7px 7px 0 #393846,8px 9px 2px rgba(0,0,0,.5),12px 18px 40px rgba(0,0,0,.55)}
 html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:none}
 @media(prefers-reduced-motion:reduce){.lb,.titles,.skip{display:none}}
 </style>
@@ -227,13 +235,17 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
 
 <main>
   <section class="hero" id="hero" data-sec="00 · старт">
-    <div class="wrap">
-      <div class="eyebrow hero-in">creative frontend <b>·</b> webgl <b>·</b> motion</div>
-      <h1 id="heroTitle" aria-label="flaccka">flaccka</h1>
-      <p class="sub hero-in">Делаю сайты, в которых хочется остаться: <b>3D-сцены, шейдеры и анимации</b>, которые отвечают на каждое движение. Прокрутите — и полетели.</p>
-      <div class="ctas hero-in">
+    <div class="hero-l">
+      <div class="eyebrow hero-in">flaccka <b>·</b> creative frontend</div>
+      <h1 id="heroTitle"><span class="w">Сайты</span> <em>за гранью</em> <span class="w">обычного.</span></h1>
+      <p class="sub hero-in">3D-сцены, шейдеры и анимации, которые отвечают на каждое движение.</p>
+    </div>
+    <div class="hero-r hero-in">
+      <h3>Исследуйте <em>миры</em></h3>
+      <p>Семь живых сайтов-примеров и один космонавт, который следит за вашим курсором. Прокрутите — и полетели.</p>
+      <div class="ctas">
         <a class="btn solid" href="#work" data-mag>Смотреть работы ↓</a>
-        <a class="btn" href="https://t.me/flaccka" target="_blank" rel="noopener" data-mag>Telegram @flaccka</a>
+        <a class="btn" href="https://t.me/flaccka" target="_blank" rel="noopener" data-mag>Telegram</a>
       </div>
     </div>
     <div class="cue"><i></i>scroll to launch</div>
@@ -243,6 +255,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
     <div class="wrap">
       <div><div class="sec-hd"><span class="num">01</span></div></div>
       <div>
+        <h2 class="ab-h h-split">Вижу сайт <em>раньше</em>, чем он появится</h2>
         <p class="lead" id="aboutLead">Я собираю сайты как отдельные миры — со своим светом, гравитацией и объектами, которые <em>отвечают на руку</em>. Не шаблон и не скриншот: каждая сцена ниже — живой код, который можно открыть, потрогать и забрать под ваш проект.</p>
         <div class="facts rv-group">
           <span class="chip">Three.js / WebGL</span><span class="chip">GLSL-шейдеры</span><span class="chip">GSAP · ScrollTrigger</span><span class="chip">Canvas / SVG</span><span class="chip">Физика интерфейса</span><span class="chip">Telegram-боты</span>
@@ -253,7 +266,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
 
   <section class="work" id="work" data-sec="02 · работы">
     <div class="wrap">
-      <div class="sec-hd"><span class="num">02</span><h2 class="h-split">Шесть миров</h2></div>
+      <div class="sec-hd"><span class="num">02</span><h2 class="h-split">Семь миров</h2></div>
       <p class="intro rv">Каждый проект — самостоятельный сайт. Нажмите на превью, чтобы поиграть прямо здесь, или откройте его в отдельной вкладке.</p>
       <div class="stack" id="stack"></div>
     </div>
@@ -333,6 +346,10 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
       desc:'Лендинг приложения для заботы о себе: 3D-капля, которую можно мять, и она дышит вместе с вами.',
       feats:['Мягкое 3D-тело: продавливается и меняет цвет','Настроение меняет форму капли','Дыхательная практика вместе с каплей'],
       tags:['Soft UI','WebGL','App'] },
+    { file:'strata.html', name:'Strata', cat:'Образование · курс', c:'#a9c47a',
+      desc:'Полевой курс геологии: каменный остров с травой и мхом, камера спускается сквозь слои породы.',
+      feats:['Процедурный 3D-остров с мягкими тенями','Спуск сквозь слои по скроллу с подсветкой','Трава колышется от движения курсора'],
+      tags:['WebGL','Cinematic','Scroll 3D'] },
     { file:'orbit-bot.html', name:'Orbit Bot', cat:'Telegram-бот', c:'#2AABEE',
       desc:'Бот-магазин в Telegram: каталог-карусель, корзина, отслеживание заказа и живой диалог.',
       feats:['Сценарий диалога разворачивается на скролле','Каталог, корзина и оплата в чате','Трекинг заказа с прогрессом'],
@@ -345,7 +362,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
     el.className = 'proj'; el.style.setProperty('--i', i); el.style.setProperty('--c', p.c);
     el.innerHTML =
       '<div class="pmeta">' +
-        '<div class="idx"><b>0' + (i+1) + '</b> / 06 — ' + p.cat + '</div>' +
+        '<div class="idx"><b>0' + (i+1) + '</b> / 07 — ' + p.cat + '</div>' +
         '<h3>' + p.name + '</h3>' +
         '<p>' + p.desc + '</p>' +
         '<ul class="feat">' + p.feats.map(function(f){ return '<li>' + f + '</li>'; }).join('') + '</ul>' +
@@ -422,23 +439,26 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
   })();
 
   /* ---------- 3D space ---------- */
+  /* studio framing: full figure centre-frame → slow push-in to the helmet → exit → return to wave goodbye */
   var keys = function(aspect){ return aspect < 1 ? [
-    { at:'#hero', p:0, sx:.2, sy:.5, d:7.5, yaw:-.8 },
-    { at:'#about', off:-.3, sx:.45, sy:.62, d:9, yaw:.6 },
+    { at:'#hero', p:0, sx:0, sy:.32, d:7.2, yaw:-.2, tilt:-.18, roll:-.04 },
+    { at:'#about', off:-.2, sx:0, sy:-.05, d:3.4, yaw:.3, tilt:-.1, roll:-.05 },
+    { at:'#about', off:.5, sx:0, sy:-.05, d:3.4, yaw:.4, tilt:-.1, roll:-.05 },
     { at:'#work', off:0, sx:2.2, sy:.5, d:9, yaw:.6 },
     { at:'#contact', off:-.5, sx:2.2, sy:.5, d:9, yaw:-.5 },
     { at:'#contact', off:0, sx:.25, sy:.5, d:7.5, yaw:-.5, wave:1 }
   ] : [
-    { at:'#hero', p:0, sx:.5, sy:-.04, d:4.3, yaw:-.85 },
-    { at:'#about', off:-.35, sx:-.64, sy:-.1, d:5.4, yaw:.75 },
-    { at:'#work', off:-.3, sx:-.72, sy:-.06, d:6.2, yaw:.6 },
-    { at:'#work', off:.45, sx:-2, sy:.3, d:7, yaw:.9 },
+    { at:'#hero', p:0, sx:.02, sy:-.02, d:4.5, yaw:-.22, tilt:-.18, roll:-.04 },
+    { at:'#about', off:-.25, sx:-.36, sy:-.78, d:2.9, yaw:.58, tilt:-.08, roll:-.06 },
+    { at:'#about', off:.55, sx:-.38, sy:-.8, d:2.7, yaw:.7, tilt:-.08, roll:-.06 },
+    { at:'#work', off:-.25, sx:-2.2, sy:.1, d:6, yaw:.8 },
     { at:'#contact', off:-.7, sx:2, sy:.2, d:6, yaw:-.6 },
     { at:'#contact', off:-.1, sx:.56, sy:-.04, d:4.8, yaw:-.55, wave:1 }
   ]; };
   var hudDist = $('#hudDist'), hudVel = $('#hudVel'), hudT = 0;
   var space = window.SpaceBG && SpaceBG.init({
-    astroKeys: keys, intro: true,
+    astroKeys: keys, intro: true, studio: true,
+    grade: { sat: .3, warm: 1, contrast: .38, crush: .035, cool: 1, vig: .8, grain: .05, bloom: .42 },
     onFrame: function(st, t, dt){
       hudT += dt; if (hudT < .1) return; hudT = 0;
       hudDist.textContent = ((1 - st.p) * 412).toFixed(1);
@@ -458,7 +478,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
   gsap.registerPlugin(ScrollTrigger);
 
   var heroChars = S.splitChars($('#heroTitle'));
-  gsap.set(heroChars, { yPercent: 115, rotate: 10, opacity: 0 });
+  gsap.set(heroChars, { yPercent: 40, opacity: 0, filter: 'blur(14px)' });
   gsap.set('.hero-in', { y: 30, opacity: 0 });
 
   $$('.h-split').forEach(function(h){ var w = S.splitWords(h, true); gsap.from(w, { yPercent: 110, duration: 1.1, ease: 'expo.out', stagger: .06, scrollTrigger: { trigger: h, start: 'top 86%' } }); });
@@ -503,7 +523,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
       .to('#chapter', { opacity: 0, y: -8, duration: .6, ease: 'power2.in' }, 1.9)
       .to([lbT, lbB], { scaleY: 0, duration: .8, ease: 'expo.inOut' }, 2.0);
   }
-  [['#about', '01', 'обо мне'], ['#work', '02', 'шесть миров'], ['#skills', '03', 'арсенал'], ['#contact', '04', 'связь']].forEach(function(c){
+  [['#about', '01', 'обо мне'], ['#work', '02', 'семь миров'], ['#skills', '03', 'арсенал'], ['#contact', '04', 'связь']].forEach(function(c){
     ScrollTrigger.create({ trigger: c[0], start: 'top 55%', onEnter: function(){ chapter(c[1], c[2]); }, onEnterBack: function(){ chapter(c[1], c[2]); } });
   });
 
@@ -511,9 +531,9 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
   var hT = $('#heroTitle'), tRX = gsap.quickTo(hT, 'rotationX', { duration: .9, ease: 'power3' }), tRY = gsap.quickTo(hT, 'rotationY', { duration: .9, ease: 'power3' });
   if (!matchMedia('(pointer:coarse)').matches) window.addEventListener('pointermove', function(e){
     if (window.scrollY > innerHeight) return;
-    tRY((e.clientX / innerWidth - .5) * 18); tRX(-(e.clientY / innerHeight - .5) * 12);
+    tRY((e.clientX / innerWidth - .5) * 10); tRX(-(e.clientY / innerHeight - .5) * 7);
   }, { passive: true });
-  gsap.to(hT, { yPercent: -18, z: -120, opacity: .2, ease: 'none', scrollTrigger: { trigger: '#hero', start: 'top top', end: 'bottom top', scrub: true } });
+  gsap.to('.hero-l,.hero-r', { y: -80, opacity: 0, filter: 'blur(10px)', ease: 'none', stagger: .05, scrollTrigger: { trigger: '#hero', start: 'top top', end: '70% top', scrub: true } });
   ScrollTrigger.create({ trigger: '.c-grid', start: 'top 70%', end: 'max', toggleClass: { targets: document.documentElement, className: 'hide-hud2' } });
   var hudSec = $('#hudSec');
   $$('main > section').forEach(function(sec){
@@ -529,7 +549,7 @@ html.embed .lb,html.embed .titles,html.embed .skip,html.embed .chapter{display:n
   /* opening sequence: black frame → title card → shutters open on a telephoto dolly → hero */
   var shot = /[?&]shot/.test(location.search), introTl = null;
   function revealHero(){
-    gsap.to(heroChars, { yPercent: 0, rotate: 0, opacity: 1, duration: 1.4, ease: 'expo.out', stagger: .055 });
+    gsap.to(heroChars, { yPercent: 0, opacity: 1, filter: 'blur(0px)', duration: 1.6, ease: 'expo.out', stagger: .03 });
     gsap.to('.hero-in', { y: 0, opacity: 1, duration: 1.2, ease: 'expo.out', stagger: .12, delay: .35 });
   }
   function finishIntro(){

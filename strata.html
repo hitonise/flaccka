@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Strata — полевой курс геологии</title>
+<meta name="description" content="Strata — концепт сайта полевого курса геологии: живой 3D-остров из камня с травой и мхом, спуск сквозь слои породы по скроллу.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@1,400;1,500&family=Inter:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root{--bg:#050505;--fg:#ecebe6;--mut:#8b8a84;--moss:#a9c47a;--f-serif:'Cormorant Garamond',serif;--f-sans:'Inter',sans-serif}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-sans);font-weight:300}
+::selection{background:var(--moss);color:#050505}
+.cur{background:#fff}
+.cur-r{border-color:rgba(255,255,255,.3)}
+.cur-r.hot,.cur-r.lbl{border-color:var(--moss);background:rgba(169,196,122,.08)}
+html.astro-hover .cur-r{width:76px;height:76px;border-color:var(--moss)}
+#scene{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.grain{position:fixed;inset:-50%;z-index:1;pointer-events:none;opacity:.07;background-image:var(--noise);animation:grain .9s steps(4) infinite}
+@keyframes grain{25%{transform:translate(-3%,2%)}50%{transform:translate(2%,-3%)}75%{transform:translate(-2%,-1%)}}
+.vig{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 55%,transparent 45%,rgba(0,0,0,.65) 100%)}
+main{position:relative;z-index:2}
+
+.top{position:fixed;top:0;left:0;right:0;z-index:60;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:22px 30px}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--f-serif);font-style:italic;font-size:26px;letter-spacing:.01em}
+.logo svg{width:22px;height:22px}
+.pills{display:flex;gap:4px;padding:5px;border-radius:999px;background:rgba(20,20,20,.72);border:1px solid rgba(255,255,255,.08)}
+.pills a{font-size:13px;padding:8px 16px;border-radius:999px;color:#bdbcb6;transition:background .3s,color .3s}
+.pills a:hover,.pills a.on{background:#ecebe6;color:#0a0a0a}
+.join{justify-self:end;font-size:13px;font-weight:500;padding:11px 20px;border-radius:999px;background:#ecebe6;color:#0a0a0a;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.join:hover{transform:scale(1.05)}
+@media(max-width:820px){.pills{display:none}.top{grid-template-columns:1fr auto}}
+
+.hero{height:100vh;min-height:600px;position:relative;display:flex;flex-direction:column;align-items:center;padding-top:15vh;text-align:center}
+.hero h1{margin:0;line-height:.92;font-weight:400}
+.hero h1 .l1{display:block;font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(52px,7.6vw,128px);letter-spacing:-.01em}
+.hero h1 .l2{display:block;font-family:var(--f-sans);font-weight:400;font-size:clamp(46px,6.8vw,116px);letter-spacing:-.045em}
+.hero .side{position:absolute;bottom:34px;font-size:13px;line-height:1.6;color:#a9a8a2;max-width:290px;text-align:left}
+.hero .side.l{left:30px}
+.hero .side.r{right:30px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;text-transform:uppercase}
+.hero .side.r i{display:block;width:1px;height:44px;margin:12px 0 0 auto;background:linear-gradient(#fff,transparent);animation:drop 2.2s cubic-bezier(.7,0,.2,1) infinite;transform-origin:top}
+@keyframes drop{0%{transform:scaleY(0)}55%{transform:scaleY(1)}100%{transform:scaleY(1);opacity:0}}
+.hero .tip{position:absolute;left:50%;bottom:40px;transform:translateX(-50%);font-size:12px;color:#77766f;white-space:nowrap}
+@media(max-width:760px){.hero .side.l{display:none}.hero .tip{display:none}}
+
+.layers{height:460vh;position:relative}
+.layers .pin{position:sticky;top:0;height:100vh;overflow:hidden}
+.lh{position:absolute;left:30px;top:110px;max-width:440px}
+.kick{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--moss)}
+.lh h2{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(40px,4.6vw,74px);line-height:1;margin:16px 0 0}
+.depth{position:absolute;left:30px;bottom:44px}
+.depth small{display:block;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--mut);text-transform:uppercase}
+.depth b{display:block;font-family:var(--f-sans);font-weight:300;font-size:clamp(40px,5vw,78px);letter-spacing:-.04em;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums}
+.lcard{position:absolute;right:30px;top:50%;width:min(360px,calc(100vw - 60px));transform:translateY(-50%)}
+.lcard article{position:absolute;inset:auto 0 auto 0;top:0;transform:translateY(-50%);padding:26px 26px 28px;border-radius:20px;background:rgba(12,12,12,.82);border:1px solid rgba(255,255,255,.1);opacity:0;visibility:hidden}
+.lcard .era{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;color:var(--moss);text-transform:uppercase}
+.lcard h3{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:40px;margin:12px 0 10px;line-height:1}
+.lcard p{margin:0;font-size:15px;line-height:1.6;color:#bdbcb6}
+.ticks{position:absolute;right:30px;bottom:44px;display:flex;gap:6px}
+.ticks i{width:34px;height:2px;background:rgba(255,255,255,.15);position:relative;overflow:hidden}
+.ticks i b{position:absolute;inset:0;background:var(--moss);transform:scaleX(0);transform-origin:left}
+@media(max-width:760px){.lcard{top:auto;bottom:130px;transform:none}.lcard article{transform:none;top:auto;bottom:0}.lh{top:90px}.depth{bottom:30px}.ticks{display:none}}
+
+.sec{position:relative;padding:150px 30px}
+.sec h2{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(44px,5.6vw,92px);line-height:1;margin:14px 0 60px;max-width:820px}
+.trips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1240px}
+.trip{position:relative;border-radius:22px;overflow:hidden;min-height:440px;display:flex;flex-direction:column;justify-content:flex-end;padding:24px;border:1px solid rgba(255,255,255,.1);background:#111 center/cover;isolation:isolate}
+.trip::after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(5,5,5,.05) 30%,rgba(5,5,5,.9) 90%)}
+.trip .when{position:absolute;top:22px;left:24px;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#d8d7d0;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.45)}
+.trip h3{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:44px;margin:0;line-height:1}
+.trip p{margin:10px 0 18px;font-size:14px;line-height:1.6;color:#c9c8c1}
+.trip .row{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#a9a8a2;border-top:1px solid rgba(255,255,255,.14);padding-top:14px}
+.trip .row b{font-weight:500;color:#fff}
+@media(max-width:960px){.trips{grid-template-columns:1fr}}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1240px;margin-top:80px}
+.stats div{border-top:1px solid rgba(255,255,255,.14);padding-top:18px}
+.stats b{display:block;font-weight:300;font-size:clamp(46px,5vw,80px);letter-spacing:-.05em;line-height:1}
+.stats span{font-size:14px;color:var(--mut)}
+@media(max-width:760px){.stats{grid-template-columns:1fr}}
+
+.final{min-height:120vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 30px}
+.final h2{font-family:var(--f-serif);font-style:italic;font-weight:400;font-size:clamp(50px,7.4vw,124px);line-height:.95;margin:16px 0 26px}
+.final p{max-width:460px;color:#bdbcb6;font-size:16px;line-height:1.6;margin:0 0 34px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:16px 28px;border-radius:999px;background:#ecebe6;color:#0a0a0a;font-weight:500;font-size:15px;transition:transform .3s cubic-bezier(.3,1.6,.5,1)}
+.foot{position:relative;z-index:2;padding:30px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12px;color:#77766f;border-top:1px solid rgba(255,255,255,.08)}
+.foot a{text-decoration:underline}
+html.embed .grain{display:none}
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div class="grain" aria-hidden="true"></div><div class="vig" aria-hidden="true"></div>
+<a href="index.html" class="back-link">← flaccka</a>
+
+<header class="top">
+  <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#ecebe6" stroke-width="1.6"><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/><path d="M3 17l9 5 9-5" opacity=".5"/></svg>Strata</span>
+  <nav class="pills"><a href="#top" class="on">Курс</a><a href="#layers">Слои</a><a href="#trips">Выезды</a><a href="#final">Запись</a></nav>
+  <a class="join" href="#final" data-mag>Записаться</a>
+</header>
+
+<main>
+  <section class="hero" id="top">
+    <h1 id="h1"><span class="l1">Каждый слой —</span><span class="l2">застывшее время</span></h1>
+    <p class="side l hin">Полевой курс геологии для тех, кто хочет читать горы как книгу. Восемь недель, три выезда и ни одного скучного учебника.</p>
+    <div class="side r hin">Листайте вниз,<br>чтобы спуститься в глубину<i></i></div>
+    <div class="tip hin">наведите на траву · нажмите на камень</div>
+  </section>
+
+  <section class="layers" id="layers">
+    <div class="pin">
+      <div class="lh"><span class="kick">// разрез</span><h2>Двести миллионов лет за одну прокрутку</h2></div>
+      <div class="lcard" id="lcard">
+        <article><span class="era">0 — 10 тыс. лет</span><h3>Почва и мох</h3><p>Живой слой: корни, лишайники и пыльца, принесённая ветром после последнего ледника.</p></article>
+        <article><span class="era">2 — 5 млн лет</span><h3>Известняк</h3><p>Дно древнего моря: раковины и кораллы, спрессованные в светлый камень. Иногда на сколе видны отпечатки.</p></article>
+        <article><span class="era">≈ 60 млн лет</span><h3>Песчаник</h3><p>Застывшие дюны. По наклону тонких слоёв можно понять, откуда дул ветер в пустыне, которой больше нет.</p></article>
+        <article><span class="era">≈ 200 млн лет</span><h3>Базальт</h3><p>Остывшая лава эпохи, когда все материки были одним целым. Самый тёмный и самый тяжёлый слой.</p></article>
+      </div>
+      <div class="depth"><small>возраст породы</small><b id="age">0</b></div>
+      <div class="ticks" id="ticks"><i><b></b></i><i><b></b></i><i><b></b></i><i><b></b></i></div>
+    </div>
+  </section>
+
+  <section class="sec" id="trips">
+    <span class="kick">// полевые выезды</span>
+    <h2>Учимся там, где порода выходит на поверхность</h2>
+    <div class="trips">
+      <article class="trip" data-tex="granite"><span class="when">июнь · 6 дней</span><h3>Карелия</h3><p>Граниты, ледниковые валуны и шрамы, которые ледник оставил на скалах двенадцать тысяч лет назад.</p><div class="row"><span>Граниты и ледник</span><b>48 000 ₽</b></div></article>
+      <article class="trip" data-tex="lime"><span class="when">август · 8 дней</span><h3>Крым</h3><p>Известняковые плато, пещеры и окаменелые рифы. Ночуем у моря, днём ищем аммониты.</p><div class="row"><span>Древнее море</span><b>56 000 ₽</b></div></article>
+      <article class="trip" data-tex="basalt"><span class="when">сентябрь · 7 дней</span><h3>Хибины</h3><p>Одни из самых редких минералов на планете. Учимся отличать эвдиалит от граната с первого взгляда.</p><div class="row"><span>Редкие минералы</span><b>62 000 ₽</b></div></article>
+    </div>
+    <div class="stats">
+      <div><b data-n="8">0</b><span>недель теории и практики</span></div>
+      <div><b data-n="3">0</b><span>выезда в поле с геологами</span></div>
+      <div><b data-n="1200" data-s="+">0</b><span>образцов в учебной коллекции</span></div>
+    </div>
+  </section>
+
+  <section class="final" id="final">
+    <span class="kick">// набор открыт</span>
+    <h2>Начните<br>с верхнего слоя</h2>
+    <p>Первая лекция бесплатна. Если после неё горы не начнут выглядеть иначе — дальше можно не идти.</p>
+    <a class="btn" href="#" id="signup" data-mag>Записаться на курс</a>
+  </section>
+</main>
+<footer class="foot"><span>Strata — концепт сайта из портфолио <a href="index.html">flaccka</a></span><span>3D-остров собран процедурно, без готовых моделей</span></footer>
+
+<script src="assets/site.js"></script>
+<script src="assets/shot.js"></script>
+<script>
+(function(){
+  'use strict';
+  var S = window.Site, $ = S.$, $$ = S.$$, SHOT = /[?&]shot/.test(location.search), lite = S.embed;
+  var mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  var coarse = matchMedia('(pointer:coarse)').matches;
+  function clamp(x, a, b){ return Math.max(a, Math.min(b, x)); }
+  function lerp(a, b, t){ return a + (b - a) * t; }
+  function sm(t){ t = clamp(t, 0, 1); return t * t * (3 - 2 * t); }
+
+  /* ---------- film grain texture (generated once) ---------- */
+  (function(){ var c = document.createElement('canvas'); c.width = c.height = 160; var x = c.getContext('2d'), d = x.createImageData(160, 160);
+    for (var i = 0; i < d.data.length; i += 4) { var v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
+    x.putImageData(d, 0, 0); document.documentElement.style.setProperty('--noise', 'url(' + c.toDataURL() + ')'); })();
+
+  /* ---------- CPU noise ---------- */
+  function h3(x, y, z){ var n = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return n - Math.floor(n); }
+  function vn(x, y, z){
+    var ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z), fx = x - ix, fy = y - iy, fz = z - iz;
+    fx = fx * fx * (3 - 2 * fx); fy = fy * fy * (3 - 2 * fy); fz = fz * fz * (3 - 2 * fz);
+    var a = lerp(lerp(h3(ix, iy, iz), h3(ix + 1, iy, iz), fx), lerp(h3(ix, iy + 1, iz), h3(ix + 1, iy + 1, iz), fx), fy);
+    var b = lerp(lerp(h3(ix, iy, iz + 1), h3(ix + 1, iy, iz + 1), fx), lerp(h3(ix, iy + 1, iz + 1), h3(ix + 1, iy + 1, iz + 1), fx), fy);
+    return lerp(a, b, fz);
+  }
+  function fbm(x, y, z, o){ var s = 0, a = .5; for (var i = 0; i < o; i++) { s += a * vn(x, y, z); x *= 2.03; y *= 2.03; z *= 2.03; a *= .5; } return s; }
+
+  /* ---------- procedural stone textures for the trip cards ---------- */
+  function stoneTex(kind){
+    var w = 360, h = 480, c = document.createElement('canvas'); c.width = w; c.height = h;
+    var x = c.getContext('2d'), d = x.createImageData(w, h);
+    var pal = { granite: [[.42, .38, .36], [.75, .68, .62], [.12, .11, .11]], lime: [[.68, .64, .55], [.86, .82, .72], [.4, .37, .3]], basalt: [[.16, .17, .19], [.32, .34, .37], [.05, .05, .06]] }[kind];
+    for (var j = 0; j < h; j++) for (var i = 0; i < w; i++) {
+      var u = i / 60, v = j / 60, n = fbm(u, v, kind.length, 5), k;
+      if (kind === 'granite') k = n + (vn(u * 9, v * 9, 3) > .78 ? .35 : 0) - (vn(u * 7, v * 7, 9) > .82 ? .4 : 0);
+      else if (kind === 'lime') k = n * .7 + Math.sin(v * 2.2 + n * 4) * .12 + (vn(u * 5, v * 5, 1) > .86 ? -.2 : 0);
+      else k = n * .9 + (vn(u * 14, v * 14, 2) - .5) * .25;
+      var t = clamp(k, 0, 1), a = t < .5 ? pal[2] : pal[0], b = t < .5 ? pal[0] : pal[1], f = t < .5 ? t * 2 : (t - .5) * 2, p = (j * w + i) * 4;
+      d.data[p] = (a[0] + (b[0] - a[0]) * f) * 255; d.data[p + 1] = (a[1] + (b[1] - a[1]) * f) * 255; d.data[p + 2] = (a[2] + (b[2] - a[2]) * f) * 255; d.data[p + 3] = 255;
+    }
+    x.putImageData(d, 0, 0); return c.toDataURL('image/jpeg', .8);
+  }
+  setTimeout(function(){ $$('.trip').forEach(function(t){ t.style.backgroundImage = 'url(' + stoneTex(t.dataset.tex) + ')'; }); }, 60);
+
+  /* ---------- three.js ---------- */
+  var canvas = $('#scene');
+  var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: !lite, powerPreference: 'high-performance', preserveDrawingBuffer: SHOT });
+  var DPR = Math.min(window.devicePixelRatio || 1, lite ? .75 : mobile ? 1.25 : 1.5);
+  renderer.setPixelRatio(DPR);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = .95;
+  var SHADOWS = !lite;
+  renderer.shadowMap.enabled = SHADOWS; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x050505, 1);
+  var scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x050505, .045);
+  var camera = new THREE.PerspectiveCamera(34, 1, .05, 80);
+
+  /* lights: warm key with soft shadows, cool rim from behind, faint sky/ground fill */
+  var key = new THREE.DirectionalLight(0xfff0dc, 2.6); key.position.set(-4, 7, 4); scene.add(key);
+  if (SHADOWS) { key.castShadow = true; key.shadow.mapSize.set(mobile ? 1024 : 2048, mobile ? 1024 : 2048); var sc = key.shadow.camera; sc.left = -3.6; sc.right = 3.6; sc.top = 3.6; sc.bottom = -3.6; sc.near = 1; sc.far = 22; key.shadow.bias = -.0006; key.shadow.normalBias = .02; key.shadow.radius = 4; }
+  var rim = new THREE.DirectionalLight(0x9fb4ff, 1.7); rim.position.set(4, 2.5, -5); scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0x8d97a8, 0x1a140e, .55));
+
+  var island = new THREE.Group(); scene.add(island);
+  var spin = new THREE.Group(); island.add(spin);
+
+  /* ---------- the floating island ---------- */
+  var DET = lite ? 34 : mobile ? 44 : 64;
+  var ico = new THREE.IcosahedronGeometry(1, DET), ip = ico.attributes.position, map = {}, uv = [], idx = [];
+  for (var i = 0; i < ip.count; i++) {
+    var X = ip.getX(i), Y = ip.getY(i), Z = ip.getZ(i), k = Math.round(X * 1e4) + '_' + Math.round(Y * 1e4) + '_' + Math.round(Z * 1e4);
+    var id = map[k]; if (id === undefined) { id = map[k] = uv.length / 3; uv.push(X, Y, Z); } idx.push(id);
+  }
+  ico.dispose();
+  var N = uv.length / 3, pos = new Float32Array(N * 3), col = new Float32Array(N * 3), topPts = [];
+  for (var v = 0; v < N; v++) {
+    var x = uv[v * 3], y = uv[v * 3 + 1], z = uv[v * 3 + 2];
+    var outline = 1.32 + (fbm(x * 1.1 + 3.1, 0, z * 1.1 + 1.7, 4) - .5) * .75;
+    var px = x * outline, pz = z * outline, py;
+    if (y > 0) {
+      py = .16 + y * .2 + (fbm(x * 3 + 7, 1, z * 3, 4) - .5) * .2 * sm(y * 4);
+    } else {
+      var dm = 2.5 * (.62 + fbm(x * 1.5, 5, z * 1.5, 4) * .7), ridge = 1 - Math.abs(vn(x * 3.2, y * 2, z * 3.2) * 2 - 1);
+      py = y * dm * (.82 + ridge * .32);
+      var taper = 1 - Math.pow(-y, 1.3) * .22; px *= taper; pz *= taper;
+    }
+    var side = 1 - Math.abs(y);
+    var lp = Math.sin(py * 21 + fbm(x * 2, py * .6, z * 2, 3) * 6) * .5 + .5, ledge = Math.pow(lp, 7) * .07 * side;
+    var rough = (fbm(x * 7, py * 6, z * 7, 4) - .5) * .13 + (vn(x * 19, py * 19, z * 19) - .5) * .035;
+    var kk = 1 + rough - ledge; px *= kk; pz *= kk; py += rough * (y < 0 ? .35 : .12);
+    pos[v * 3] = px; pos[v * 3 + 1] = py; pos[v * 3 + 2] = pz;
+    /* colour: layered sediment, dark crevices, soil on top */
+    var band = Math.sin(py * 8.5 + fbm(x * 1.5, py, z * 1.5, 3) * 3) * .5 + .5;
+    var L = .055 + band * .035 + fbm(x * 5, py * 5, z * 5, 3) * .05;
+    L *= 1 + rough * 3 - ledge * 4;
+    if (py < -1.45) L *= .65;
+    var r = L * 1.06, g = L, b = L * .93;
+    if (py < -.6 && py > -1.3) { r *= 1.18; g *= 1.06; b *= .86; }
+    if (y > .25) { var s2 = sm((y - .25) * 3); r = lerp(r, .045, s2); g = lerp(g, .05, s2); b = lerp(b, .03, s2); }
+    col[v * 3] = Math.max(.015, r); col[v * 3 + 1] = Math.max(.015, g); col[v * 3 + 2] = Math.max(.012, b);
+    if (y > .38) topPts.push(v);
+  }
+  var geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setIndex(idx); geo.computeVertexNormals(); geo.computeBoundingSphere();
+  var bandU = { uBandY: { value: .2 }, uBandAmp: { value: 0 }, uBandCol: { value: new THREE.Color(0xc8e39a) } };
+  var rockMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .94, metalness: 0 });
+  rockMat.onBeforeCompile = function(sh){
+    sh.uniforms.uBandY = bandU.uBandY; sh.uniforms.uBandAmp = bandU.uBandAmp; sh.uniforms.uBandCol = bandU.uBandCol;
+    sh.vertexShader = 'varying float vLy;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vLy = position.y;');
+    sh.fragmentShader = 'uniform float uBandY, uBandAmp; uniform vec3 uBandCol; varying float vLy;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+      '#include <emissivemap_fragment>\n float bd = (vLy - uBandY); totalEmissiveRadiance += uBandCol * uBandAmp * (exp(-bd*bd/.012) * .22 + exp(-bd*bd/.00008) * 1.4);');
+  };
+  var rock = new THREE.Mesh(geo, rockMat); rock.castShadow = rock.receiveShadow = SHADOWS; spin.add(rock);
+  var nrm = geo.attributes.normal;
+
+  /* ---------- grass blades (instanced, wind in the vertex shader) ---------- */
+  var BL = 5, bp = [], bu = [], bi = [];
+  for (var s = 0; s <= BL; s++) { var t = s / BL, w = .5 * (1 - t * .92); bp.push(-w, t, 0, w, t, 0); bu.push(0, t, 1, t); if (s < BL) { var a0 = s * 2; bi.push(a0, a0 + 1, a0 + 2, a0 + 1, a0 + 3, a0 + 2); } }
+  var bladeGeo = new THREE.BufferGeometry(); bladeGeo.setAttribute('position', new THREE.Float32BufferAttribute(bp, 3)); bladeGeo.setAttribute('uv', new THREE.Float32BufferAttribute(bu, 2)); bladeGeo.setIndex(bi);
+  var grassU = { uTime: { value: 0 }, uWind: { value: 1 }, uLight: { value: new THREE.Vector3(-4, 7, 4).normalize() } };
+  var grassMat = new THREE.ShaderMaterial({
+    uniforms: grassU, side: THREE.DoubleSide,
+    vertexShader: [
+      'uniform float uTime, uWind; varying float vT; varying vec3 vC;',
+      'void main(){',
+      '  vT = uv.y; vC = vec3(.32,.42,.16);',
+      '  #ifdef USE_INSTANCING_COLOR', '  vC = instanceColor;', '  #endif',
+      '  vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);',
+      '  float t2 = uv.y * uv.y;',
+      '  float w = sin(uTime * 1.6 + wp.x * 2.6 + wp.z * 1.9) * .6 + sin(uTime * 3.3 + wp.x * 7.1) * .25;',
+      '  wp.x += w * t2 * .045 * uWind; wp.z += cos(uTime * 1.25 + wp.z * 3.7) * t2 * .03 * uWind;',
+      '  gl_Position = projectionMatrix * viewMatrix * wp;',
+      '}'].join('\n'),
+    fragmentShader: [
+      'varying float vT; varying vec3 vC;',
+      'void main(){',
+      '  vec3 c = mix(vC * .18, vC, smoothstep(0., .9, vT));',
+      '  c += vec3(.55,.62,.3) * pow(vT, 4.) * .35;',
+      '  gl_FragColor = vec4(c, 1.0);',
+      '  #include <tonemapping_fragment>', '  #include <encodings_fragment>',
+      '}'].join('\n')
+  });
+  var NG = Math.min(topPts.length * 3, lite ? 2200 : mobile ? 4500 : 9000);
+  var grass = new THREE.InstancedMesh(bladeGeo, grassMat, NG), dm2 = new THREE.Object3D(), tc = new THREE.Color(), up = new THREE.Vector3(0, 1, 0), nv = new THREE.Vector3(), qq = new THREE.Quaternion();
+  for (var gI = 0; gI < NG; gI++) {
+    var vi = topPts[(Math.random() * topPts.length) | 0];
+    nv.set(nrm.getX(vi), nrm.getY(vi), nrm.getZ(vi)).normalize();
+    var gx = pos[vi * 3] + (Math.random() - .5) * .05, gz = pos[vi * 3 + 2] + (Math.random() - .5) * .05;
+    var edge = Math.hypot(gx, gz);
+    dm2.position.set(gx, pos[vi * 3 + 1] - .005, gz);
+    qq.setFromUnitVectors(up, nv.lerp(up, .5).normalize()); dm2.quaternion.copy(qq); dm2.rotateY(Math.random() * Math.PI * 2); dm2.rotateX((Math.random() - .5) * .5);
+    var hgt = (.06 + Math.pow(Math.random(), 2) * .2) * (fbm(gx * 1.4, 2, gz * 1.4, 3) > .45 ? 1.25 : .7);
+    dm2.scale.set(.018 + Math.random() * .014, hgt, 1); dm2.updateMatrix(); grass.setMatrixAt(gI, dm2.matrix);
+    var dry = fbm(gx * 2, 9, gz * 2, 2);
+    tc.setRGB(lerp(.2, .5, dry), lerp(.34, .44, dry), lerp(.08, .14, dry)); grass.setColorAt(gI, tc);
+  }
+  grass.frustumCulled = false; spin.add(grass);
+
+  /* ---------- moss clumps ---------- */
+  var NM = lite ? 500 : mobile ? 900 : 1700;
+  var moss = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 1), new THREE.MeshStandardMaterial({ roughness: 1, metalness: 0 }), NM);
+  for (var mI = 0; mI < NM; mI++) {
+    var mv = topPts[(Math.random() * topPts.length) | 0], mr = .025 + Math.random() * .055;
+    dm2.position.set(pos[mv * 3], pos[mv * 3 + 1] + mr * .1, pos[mv * 3 + 2]); dm2.rotation.set(0, Math.random() * 6, 0); dm2.scale.set(mr, mr * .42, mr * (.8 + Math.random() * .4)); dm2.updateMatrix(); moss.setMatrixAt(mI, dm2.matrix);
+    var mm = Math.random(); tc.setRGB(lerp(.07, .2, mm), lerp(.13, .26, mm), lerp(.03, .06, mm)); moss.setColorAt(mI, tc);
+  }
+  moss.castShadow = moss.receiveShadow = SHADOWS; spin.add(moss);
+
+  /* ---------- hanging roots ---------- */
+  var rootMat = new THREE.MeshStandardMaterial({ color: 0x2a2018, roughness: .9 });
+  for (var rI = 0; rI < (lite ? 5 : 11); rI++) {
+    var ang = Math.random() * Math.PI * 2, rr = 1.05 + Math.random() * .25, sx = Math.cos(ang) * rr, sz = Math.sin(ang) * rr, sy = .1, pts = [], len = .5 + Math.random() * .9;
+    for (var q = 0; q <= 6; q++) { var f = q / 6; pts.push(new THREE.Vector3(sx * (1 - f * .25) + Math.sin(f * 5 + rI) * .06, sy - f * len, sz * (1 - f * .25) + Math.cos(f * 4 + rI) * .06)); }
+    var root = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 24, .007 + Math.random() * .008, 5, false), rootMat);
+    root.castShadow = SHADOWS; spin.add(root);
+  }
+
+  /* ---------- small floating stones ---------- */
+  function pebbleGeo(seed, det){
+    var g = new THREE.IcosahedronGeometry(1, det), p = g.attributes.position, m2 = {}, ver = [], ix = [];
+    for (var a = 0; a < p.count; a++) { var X2 = p.getX(a), Y2 = p.getY(a), Z2 = p.getZ(a), kk2 = Math.round(X2 * 1e4) + '_' + Math.round(Y2 * 1e4) + '_' + Math.round(Z2 * 1e4); var j = m2[kk2]; if (j === undefined) { j = m2[kk2] = ver.length / 3; ver.push(X2, Y2, Z2); } ix.push(j); }
+    var n2 = ver.length / 3, pp = new Float32Array(n2 * 3), cc = new Float32Array(n2 * 3);
+    for (var bI = 0; bI < n2; bI++) { var a1 = ver[bI * 3], a2 = ver[bI * 3 + 1], a3 = ver[bI * 3 + 2], d = 1 + (fbm(a1 * 1.6 + seed, a2 * 1.6, a3 * 1.6, 4) - .5) * .7; pp[bI * 3] = a1 * d * 1.1; pp[bI * 3 + 1] = a2 * d * .8; pp[bI * 3 + 2] = a3 * d; var L2 = .07 + fbm(a1 * 5, a2 * 5 + seed, a3 * 5, 3) * .08; cc[bI * 3] = L2 * 1.05; cc[bI * 3 + 1] = L2; cc[bI * 3 + 2] = L2 * .94; }
+    var gg = new THREE.BufferGeometry(); gg.setAttribute('position', new THREE.BufferAttribute(pp, 3)); gg.setAttribute('color', new THREE.BufferAttribute(cc, 3)); gg.setIndex(ix); gg.computeVertexNormals(); g.dispose(); return gg;
+  }
+  var pebMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95 });
+  var floaters = [];
+  for (var fI = 0; fI < (lite ? 4 : 8); fI++) {
+    var fm = new THREE.Mesh(pebbleGeo(fI * 3.3, lite ? 3 : 5), pebMat);
+    var fr = 1.9 + Math.random() * 1.3, fa = fI / 8 * Math.PI * 2 + Math.random(), fh = -1.6 + Math.random() * 2.2, fs = .05 + Math.random() * .13;
+    fm.scale.setScalar(fs); fm.castShadow = SHADOWS;
+    fm.userData = { r: fr, a: fa, h: fh, sp: (.05 + Math.random() * .08) * (Math.random() < .5 ? -1 : 1), bob: Math.random() * 6 };
+    island.add(fm); floaters.push(fm);
+  }
+
+  /* ---------- dust in the light ---------- */
+  var DN = lite ? 250 : 700, dpos = new Float32Array(DN * 3), dsz = new Float32Array(DN);
+  for (var dI = 0; dI < DN; dI++) { dpos[dI * 3] = (Math.random() - .5) * 9; dpos[dI * 3 + 1] = (Math.random() - .5) * 7 - .6; dpos[dI * 3 + 2] = (Math.random() - .5) * 7; dsz[dI] = .4 + Math.random() * 1.4; }
+  var dgeo = new THREE.BufferGeometry(); dgeo.setAttribute('position', new THREE.BufferAttribute(dpos, 3)); dgeo.setAttribute('aS', new THREE.BufferAttribute(dsz, 1));
+  var dust = new THREE.Points(dgeo, new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uPx: { value: DPR } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: 'attribute float aS; uniform float uTime, uPx; varying float vA; void main(){ vec3 p = position; p.y += mod(uTime * .05 * aS + p.x, 7.) - 3.5; p.x += sin(uTime * .3 + p.z) * .2; vec4 mv = modelViewMatrix * vec4(p, 1.); vA = smoothstep(9., 2., -mv.z); gl_PointSize = aS * uPx * 18. / -mv.z; gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'varying float vA; void main(){ float d = length(gl_PointCoord - .5); float a = (1. - smoothstep(0., .5, d)) * vA * .5; gl_FragColor = vec4(vec3(1., .94, .82) * a, a); }'
+  }));
+  dust.frustumCulled = false; scene.add(dust);
+
+  /* ---------- falling pebbles on click ---------- */
+  var falling = [], pebGeoSmall = pebbleGeo(9, 2);
+  function chip(point){
+    for (var c2 = 0; c2 < 6; c2++) {
+      var m = new THREE.Mesh(pebGeoSmall, pebMat); m.scale.setScalar(.015 + Math.random() * .03); m.position.copy(point);
+      m.userData = { v: new THREE.Vector3((Math.random() - .5) * .9, Math.random() * .6, (Math.random() - .5) * .9), r: new THREE.Vector3(Math.random() * 6, Math.random() * 6, 0), life: 0 };
+      scene.add(m); falling.push(m);
+    }
+    grassU.uWind.value = 4;
+  }
+
+  /* ---------- camera choreography driven by scroll ---------- */
+  var BANDS = [.24, -.38, -1.0, -1.85], AGES = [0, 3e6, 6e7, 2e8];
+  var anchors = [];
+  function measure(){
+    var L = $('#layers'), lTop = L.offsetTop, lEnd = lTop + L.offsetHeight - innerHeight, tr = $('#trips'), fn = $('#final');
+    var portrait = innerWidth < innerHeight;
+    anchors = [
+      { y: 0, cam: portrait ? [0, .7, 11.5] : [0, .95, 8.6], look: [0, -.62, 0] },
+      { y: lTop, cam: portrait ? [1.4, .7, 6.4] : [3.7, .6, 4.6], look: portrait ? [0, .05, 0] : [-.35, .15, 0] },
+      { y: lEnd, cam: portrait ? [1.2, -1.75, 6] : [3.4, -1.75, 4.3], look: portrait ? [0, -1.85, 0] : [-.35, -1.85, 0] },
+      { y: tr.offsetTop + tr.offsetHeight * .35 - innerHeight * .3, cam: [-5.6, 1.6, 6.2], look: portrait ? [0, -.6, 0] : [1.7, -.6, 0] },
+      { y: fn.offsetTop + fn.offsetHeight / 2 - innerHeight / 2, cam: [0, 6.8, 2.3], look: [0, -.1, 0] }
+    ];
+    anchors.layersTop = lTop; anchors.layersEnd = lEnd;
+  }
+  function camAt(y, out){
+    var a = anchors, i = 0;
+    if (y <= a[0].y) { out.c = a[0].cam; out.l = a[0].look; return; }
+    for (i = 0; i < a.length - 1; i++) if (y <= a[i + 1].y) break;
+    if (i >= a.length - 1) { out.c = a[a.length - 1].cam; out.l = a[a.length - 1].look; return; }
+    var t = sm((y - a[i].y) / Math.max(1, a[i + 1].y - a[i].y)), A = a[i], B = a[i + 1];
+    out.c = [lerp(A.cam[0], B.cam[0], t), lerp(A.cam[1], B.cam[1], t), lerp(A.cam[2], B.cam[2], t)];
+    out.l = [lerp(A.look[0], B.look[0], t), lerp(A.look[1], B.look[1], t), lerp(A.look[2], B.look[2], t)];
+  }
+  function resize(){ var w = innerWidth, h = innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 46 : 34; camera.updateProjectionMatrix(); measure(); }
+  window.addEventListener('resize', resize); window.addEventListener('load', function(){ measure(); }); resize();
+
+  /* ---------- pointer: parallax tilt, wind from cursor speed, raycast for clicks ---------- */
+  var ptr = new THREE.Vector2(9, 9), pS = { x: 0, y: 0 }, lastP = null, windT = 1, ray = new THREE.Raycaster(), hoverRock = false;
+  window.addEventListener('pointermove', function(e){
+    ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+    if (lastP) windT = Math.min(5, windT + Math.hypot(e.clientX - lastP[0], e.clientY - lastP[1]) * .012);
+    lastP = [e.clientX, e.clientY];
+  }, { passive: true });
+  function uiTarget(el){ return el && el.closest && el.closest('a,button,.trip,.lcard,.top'); }
+  window.addEventListener('click', function(e){
+    if (uiTarget(e.target)) return;
+    ray.setFromCamera(ptr, camera);
+    var h = ray.intersectObject(rock, false);
+    if (h.length) chip(h[0].point);
+  });
+
+  /* ---------- loop ---------- */
+  var camS = null, lookS = null, tmp = {}, clock = performance.now(), lastDraw = 0, minFrame = lite ? 31 : 0, hoverT = 0, ageEl = $('#age');
+  var lookV = new THREE.Vector3(), bandIdx = -1;
+  function fmtAge(a){ if (a < 1e4) return Math.round(a).toLocaleString('ru-RU') + ' лет'; if (a < 1e6) return Math.round(a / 1e3).toLocaleString('ru-RU') + ' тыс. лет'; return Math.round(a / 1e6).toLocaleString('ru-RU') + ' млн лет'; }
+  function render(now){
+    var dt = Math.min(.05, (now - clock) / 1000); clock = now; var t = now / 1000;
+    var y = window.scrollY;
+    camAt(y, tmp);
+    if (!camS || SHOT) { camS = tmp.c.slice(); lookS = tmp.l.slice(); }
+    var k = 1 - Math.exp(-dt * 3.2);
+    for (var i = 0; i < 3; i++) { camS[i] = lerp(camS[i], tmp.c[i], k); lookS[i] = lerp(lookS[i], tmp.l[i], k); }
+    pS.x = lerp(pS.x, coarse ? Math.sin(t * .3) * .3 : (ptr.x > 5 ? 0 : ptr.x), 1 - Math.exp(-dt * 2.5));
+    pS.y = lerp(pS.y, coarse ? 0 : (ptr.y > 5 ? 0 : ptr.y), 1 - Math.exp(-dt * 2.5));
+    camera.position.set(camS[0] + pS.x * .35, camS[1] + pS.y * .22, camS[2]);
+    lookV.set(lookS[0], lookS[1], lookS[2]); camera.lookAt(lookV);
+
+    /* island drifts, slowly turns, tilts toward the pointer */
+    spin.rotation.y += dt * (S.RM ? 0 : .06);
+    island.position.y = Math.sin(t * .6) * .06;
+    island.rotation.x = lerp(island.rotation.x, -pS.y * .08, .05); island.rotation.z = lerp(island.rotation.z, -pS.x * .06, .05);
+
+    /* layer highlight while descending through the cross-section */
+    var lp = clamp((y - anchors.layersTop) / Math.max(1, anchors.layersEnd - anchors.layersTop), 0, 1), inL = y > anchors.layersTop - innerHeight * .4 && y < anchors.layersEnd + innerHeight * .4;
+    var f = lp * 3, bi2 = Math.min(2, Math.floor(f)), bt = f - bi2;
+    bandU.uBandY.value = lerp(BANDS[bi2], BANDS[bi2 + 1], sm(bt * 1.6 - .3));
+    bandU.uBandAmp.value = lerp(bandU.uBandAmp.value, inL ? 1 : 0, 1 - Math.exp(-dt * 4));
+    var cur = Math.min(3, Math.round(f));
+    if (cur !== bandIdx && inL) { setLayer(cur); }
+    if (inL) ageEl.textContent = fmtAge(Math.pow(lp, 2.2) * AGES[3]);
+
+    for (var fi2 = 0; fi2 < floaters.length; fi2++) { var F = floaters[fi2], u = F.userData; u.a += u.sp * dt; F.position.set(Math.cos(u.a) * u.r, u.h + Math.sin(t * .7 + u.bob) * .08, Math.sin(u.a) * u.r); F.rotation.x += dt * .2; F.rotation.y += dt * .15; }
+    for (var p2 = falling.length - 1; p2 >= 0; p2--) { var P = falling[p2], d2 = P.userData; d2.life += dt; d2.v.y -= 2.4 * dt; P.position.addScaledVector(d2.v, dt); P.rotation.x += d2.r.x * dt; P.rotation.y += d2.r.y * dt; if (d2.life > 3) { scene.remove(P); falling.splice(p2, 1); } }
+
+    windT = lerp(windT, 1, 1 - Math.exp(-dt * .9));
+    grassU.uWind.value = lerp(grassU.uWind.value, windT, 1 - Math.exp(-dt * 3));
+    grassU.uTime.value = t; dust.material.uniforms.uTime.value = t;
+
+    if (!coarse && ptr.x < 5) { ray.setFromCamera(ptr, camera); var hr = ray.intersectObject(rock, false).length > 0; if (hr !== hoverRock) { hoverRock = hr; document.documentElement.classList.toggle('astro-hover', hr); } }
+    renderer.render(scene, camera);
+  }
+  function frame(now){ requestAnimationFrame(frame); if (document.hidden || (minFrame && now - lastDraw < minFrame)) return; lastDraw = now; render(now); }
+  requestAnimationFrame(frame);
+  window.__strata = { step: function(){ render(performance.now()); } };
+
+  /* ---------- layer cards ---------- */
+  var cards = $$('#lcard article'), ticks = $$('#ticks b');
+  function setLayer(i){
+    var prev = bandIdx; bandIdx = i;
+    cards.forEach(function(c, j){
+      if (j === i) gsap.fromTo(c, { autoAlpha: 0, y: i > prev ? 30 : -30, filter: 'blur(8px)' }, { autoAlpha: 1, y: 0, filter: 'blur(0px)', duration: .7, ease: 'expo.out', overwrite: true });
+      else if (j === prev) gsap.to(c, { autoAlpha: 0, y: i > prev ? -30 : 30, filter: 'blur(8px)', duration: .4, ease: 'power2.in', overwrite: true });
+    });
+    ticks.forEach(function(b, j){ gsap.to(b, { scaleX: j <= i ? 1 : 0, duration: .5, ease: 'power3.out' }); });
+  }
+
+  S.cursor(); S.magnetic('[data-mag]', .25); S.tilt('.trip', 6, true);
+  $('#signup').addEventListener('click', function(e){ e.preventDefault(); S.toast('Это демо — запись не отправлена'); });
+
+  /* ---------- page choreography ---------- */
+  gsap.registerPlugin(ScrollTrigger);
+  var c1 = S.splitChars($('#h1 .l1')), c2 = S.splitChars($('#h1 .l2'));
+  gsap.from(c1.concat(c2), { yPercent: 60, opacity: 0, filter: 'blur(12px)', duration: 1.6, ease: 'expo.out', stagger: .035, delay: SHOT ? 0 : .3 });
+  gsap.from('.hin', { opacity: 0, y: 20, duration: 1.4, ease: 'expo.out', stagger: .12, delay: SHOT ? 0 : 1 });
+  gsap.to('#h1', { yPercent: -60, opacity: 0, ease: 'none', scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } });
+  gsap.from('.lh > *', { y: 40, opacity: 0, duration: 1.2, ease: 'expo.out', stagger: .1, scrollTrigger: { trigger: '#layers', start: 'top 60%' } });
+  $$('.sec h2,.final h2').forEach(function(h){ var w = S.splitWords(h, true); gsap.from(w, { yPercent: 110, duration: 1.2, ease: 'expo.out', stagger: .06, scrollTrigger: { trigger: h, start: 'top 85%' } }); });
+  gsap.from('.trip', { y: 120, opacity: 0, rotateX: -18, transformPerspective: 1200, duration: 1.3, ease: 'expo.out', stagger: .12, scrollTrigger: { trigger: '.trips', start: 'top 85%' } });
+  $$('[data-n]').forEach(function(el){ ScrollTrigger.create({ trigger: el, start: 'top 90%', once: true, onEnter: function(){ var o = { v: 0 }; gsap.to(o, { v: +el.dataset.n, duration: 2, ease: 'power3.out', onUpdate: function(){ el.textContent = Math.round(o.v).toLocaleString('ru-RU') + (el.dataset.s || ''); } }); } }); });
+  ScrollTrigger.create({ trigger: '#layers', start: 'top top', end: 'bottom bottom', onLeaveBack: function(){ bandIdx = -1; cards.forEach(function(c){ gsap.to(c, { autoAlpha: 0, duration: .3 }); }); } });
+  ScrollTrigger.addEventListener('refresh', measure);
+  setLayer(0);
+})();
+</script>
+</body>
+</html>
